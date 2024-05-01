@@ -76,8 +76,8 @@ type
         FCurrentViewPos:TCurrentViewPos;
         FNeedScipEOL:boolean;
       function FindEOL:int64;inline;
-      procedure ScipEOL;inline;
-      procedure ScipEOLifNeed;inline;
+      procedure SkipEOL;inline;
+      procedure SkipEOLifNeed;inline;
       function fastReadByte:byte;inline;
       procedure ResetLastChar;inline;
       procedure setFromTMemViewInfo(AMVI:TMemViewInfo);
@@ -138,7 +138,7 @@ end;
 
 function TZInMemoryReader.EOF:Boolean;
 begin
-  ScipEOLifNeed;
+  SkipEOLifNeed;
   if FCurrentViewPos<>CVPLast then
     result:=false
   else
@@ -170,14 +170,14 @@ begin
   setFromTMemViewInfo(fIS.GetMemViewInfo);
 end;
 
-procedure TZInMemoryReader.ScipEOLifNeed;
+procedure TZInMemoryReader.SkipEOLifNeed;
 begin
   if FNeedScipEOL then begin
-    ScipEOL;
+    SkipEOL;
     FNeedScipEOL:=false;
   end;
 end;
-procedure TZInMemoryReader.ScipEOL;
+procedure TZInMemoryReader.SkipEOL;
 var
   CurrentByte:Byte;
   CurrentWord:Word;
@@ -231,7 +231,7 @@ var
  {$endif}
 begin
   {$ifdef FPC_LITTLE_ENDIAN}
-  ScipEOLifNeed;
+  SkipEOLifNeed;
 
   InMemPos:=fInMemPosition;
   pch:=@fMemory[InMemPos];

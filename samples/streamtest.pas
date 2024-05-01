@@ -1,5 +1,9 @@
 program streamtest;
-{$Mode objfpc}{$H+}
+{$ifdef fpc}
+  {$Mode objfpc}{$H+}
+{$else}
+  {$apptype console}
+{$endif}
 
 uses
  SysUtils,bufstream,
@@ -83,7 +87,7 @@ end;
 
 begin
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
-  DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
+  //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
   DoTest(@TestMMF,'Memory Mapped File',DefaultFileName);
   DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream',DefaultFileName);
 end.

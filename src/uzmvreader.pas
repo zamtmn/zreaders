@@ -1,4 +1,4 @@
-{
+﻿{
 *****************************************************************************
 *                                                                           *
 *  This file is part of the ZCAD                                            *
@@ -17,7 +17,9 @@
 }
 
 unit uzMVReader;
-{$Mode objfpc}{$H+}
+{$ifdef fpc}
+  {$Mode objfpc}{$H+}
+{$endif}
 {Inline off}
 
 interface
@@ -28,6 +30,14 @@ uses
 type
   TSetOfBytes=set of AnsiChar;
   TInMemReaderInt=int64;
+ {$ifndef fpc}
+   PtrUInt=NativeUInt;
+   PtrInt=NativeInt;
+   dword=Cardinal;
+   pdword=^dword;
+   qword=UInt64;
+   {$define FPC_LITTLE_ENDIAN}
+ {$endif}
 
 const
   ChLF=#10;
@@ -166,7 +176,9 @@ const
   OVERFLOW_MASK8=Int64($8080808080808080);
  {$endif}
 var
- {$push}
+{$ifdef fpc}
+  {$push}
+{$endif}
  {$OVERFLOWCHECKS OFF}
  {$RANGECHECKS OFF}
   InMemPos:PtrUInt;
@@ -290,7 +302,9 @@ begin
  {$else}
   {$Error Not Implemented}
  {$endif}
- {$pop}
+{$ifdef fpc}
+  {$pop}
+{$endif}
 end;
 
 
@@ -300,7 +314,9 @@ var
   l:int64;
   ts:string;
 begin
- {$push}
+{$ifdef fpc}
+  {$push}
+{$endif}
  {$OVERFLOWCHECKS OFF}
  {$RANGECHECKS OFF}
   PEOL:=FindEOL;
@@ -322,7 +338,9 @@ begin
     {//}Move(fMemory[fInMemPosition],Result[1],l);
     fInMemPosition:=PEOL;
   end;
- {$pop}
+{$ifdef fpc}
+  {$pop}
+{$endif}
 end;
 
 begin

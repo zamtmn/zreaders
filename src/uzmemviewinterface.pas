@@ -17,8 +17,10 @@
 }
 
 unit uzMemViewInterface;
-{$Mode objfpc}{$H+}
-{$Interfaces CORBA}
+{$ifdef fpc}
+  {$Mode objfpc}{$H+}
+  {$Interfaces CORBA}
+{$endif}
 
 interface
 uses

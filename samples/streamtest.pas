@@ -6,8 +6,8 @@ program streamtest;
 {$endif}
 
 uses
- SysUtils,bufstream,
- uzMVReader,uzMVSMemoryMappedFile,uzMVSReadBufStream;
+ SysUtils,{$ifdef fpc}bufstream,{$endif}
+ uzMVReader,uzMVSMemoryMappedFile{$ifdef fpc},uzMVSReadBufStream{$endif};
 
 type
   TTestFunc=function(AFileName:string):int64;
@@ -49,7 +49,7 @@ begin
   newStream.Destroy;
   mr.Destroy;
 end;
-
+{$ifdef fpc}
 function TestBufferedFileStream(AFileName:string):int64;
 var
   newStream:TBufferedFileStream;
@@ -71,7 +71,7 @@ begin
   bs.Destroy;
   mr.Destroy;
 end;
-
+{$endif}
 procedure DoTest(ATestFunc:TTestFunc;ATestName,AFileName:string);
 var
   TestResult:int64;
@@ -89,7 +89,9 @@ begin
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
   //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
   DoTest(@TestMMF,'Memory Mapped File',DefaultFileName);
+  {$ifdef fpc}
   DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream',DefaultFileName);
+  {$endif}
 end.
 
 

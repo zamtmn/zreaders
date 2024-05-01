@@ -17,7 +17,9 @@
 }
 
 unit uzMVSMemoryMappedFile;
-{$Mode objfpc}{$H+}
+{$ifdef fpc}
+  {$Mode objfpc}{$H+}
+{$endif}
 
 interface
 uses
@@ -29,6 +31,11 @@ type
 
     function MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
     function GetMemViewInfo:TMemViewInfo;
+  {$ifndef fpc}
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+  {$endif}
   end;
 
 implementation
@@ -47,6 +54,18 @@ begin
   Seek(ANewPosition,soBeginning);
   result:=GetMemViewInfo;
 end;
+
+{$ifndef fpc}
+function TZMVSMemoryMappedFile.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+end;
+function TZMVSMemoryMappedFile._AddRef: Integer; stdcall;
+begin
+end;
+function TZMVSMemoryMappedFile._Release: Integer; stdcall;
+begin
+end;
+{$endif}
 
 begin
 end.

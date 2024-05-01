@@ -337,9 +337,9 @@ end;
 {$else}
 begin
  if ReadOnly then begin
-  fMapHandle:=CreateFileMapping(fFileHandle,nil,PAGE_READONLY,Hi(fSize),Lo(fSize),nil);
+  fMapHandle:=CreateFileMapping(fFileHandle,nil,PAGE_READONLY,Int64Rec(fSize).Hi{Hi(fSize)},Int64Rec(fSize).Lo{Lo(fSize)},nil);
  end else begin
-  fMapHandle:=CreateFileMapping(fFileHandle,nil,PAGE_READWRITE,Hi(fSize),Lo(fSize),nil);
+  fMapHandle:=CreateFileMapping(fFileHandle,nil,PAGE_READWRITE,Int64Rec(fSize).Hi{Hi(fSize)},Int64Rec(fSize).Lo{Lo(fSize)},nil);
  end;
  if fMapHandle=0 then begin
   raise Exception.Create(SysErrorMessage(GetLastError));
@@ -349,9 +349,9 @@ begin
   fCurrentViewSize:=fSize-fCurrentViewOffset;
  end;
  if ReadOnly then begin
-  fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ,Hi(fCurrentViewOffset),Lo(fCurrentViewOffset),fCurrentViewSize);
+  fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ,Int64Rec(fCurrentViewOffset).Hi{Hi(fCurrentViewOffset)},Int64Rec(fCurrentViewOffset).Lo{Lo(fCurrentViewOffset)},fCurrentViewSize);
  end else begin
-  fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ or FILE_MAP_WRITE,Hi(fCurrentViewOffset),Lo(fCurrentViewOffset),fCurrentViewSize);
+  fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ or FILE_MAP_WRITE,Int64Rec(fCurrentViewOffset).Hi{Hi(fCurrentViewOffset)},Int64Rec(fCurrentViewOffset).Lo{Lo(fCurrentViewOffset)},fCurrentViewSize);
  end;
  if not assigned(fMemory) then begin
   raise Exception.Create(SysErrorMessage(GetLastError));
@@ -402,9 +402,9 @@ begin
    fMemory:=nil;
   end;
   if ReadOnly then begin
-   fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ,Hi(fCurrentViewOffset),Lo(fCurrentViewOffset),fCurrentViewSize);
+   fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ,Int64Rec(fCurrentViewOffset).Hi{Hi(fCurrentViewOffset)},Int64Rec(fCurrentViewOffset).Lo{Lo(fCurrentViewOffset)},fCurrentViewSize);
   end else begin
-   fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ or FILE_MAP_WRITE,Hi(fCurrentViewOffset),Lo(fCurrentViewOffset),fCurrentViewSize);
+   fMemory:=MapViewOfFile(fMapHandle,FILE_MAP_READ or FILE_MAP_WRITE,Int64Rec(fCurrentViewOffset).Hi{Hi(fCurrentViewOffset)},Int64Rec(fCurrentViewOffset).Lo{Lo(fCurrentViewOffset)},fCurrentViewSize);
   end;
   if not assigned(fMemory) then begin
    raise Exception.Create(SysErrorMessage(GetLastError));

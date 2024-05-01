@@ -353,8 +353,10 @@ begin
  {$RANGECHECKS OFF}
   PEOL:=FindEOL;
   if PEOL=fInMemPosition then
+    //сразу встретился перевод строки, пустая строка
     exit('')
   else if PEOL=CNotInThisPage then begin
+    //уперлись в границу области отображения, двигаем и читаем дальше
     {//}l:=fCurrentViewSize-fInMemPosition;
     {//}SetLength(Result,l);
     {//}Move(fMemory[fInMemPosition],Result[1],l);
@@ -362,6 +364,7 @@ begin
     ts:=ParseString();
     {//}result:=result+ts;
   end else begin
+    //Конец строки найден, создаем и возвращаем строку
     {//}l:=PEOL-fInMemPosition;
     {//}SetLength(Result,l);
     {//}Move(fMemory[fInMemPosition],Result[1],l);

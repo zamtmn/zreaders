@@ -18,7 +18,7 @@ var
 function TestReadLn(AFileName:string):int64;
 var
   f:text;
-  s:string;
+  s:AnsiString;
   buf:array[word]of byte;
 begin
   Result:=0;
@@ -36,7 +36,7 @@ function TestMMF(AFileName:string):int64;
 var
   newStream:TZMVSMemoryMappedFile;
   mr:TZMemReader;
-  s:String;
+  s:AnsiString;
 begin
   Result:=0;
   newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
@@ -55,7 +55,7 @@ var
   newStream:TBufferedFileStream;
   bs:TZMVSReadBufStream;
   mr:TZMemReader;
-  s:String;
+  s:AnsiString;
 begin
   Result:=0;
   newStream:=TBufferedFileStream.Create(AFileName,fmOpenRead);

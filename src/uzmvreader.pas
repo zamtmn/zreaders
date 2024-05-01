@@ -67,7 +67,7 @@ type
     public
       procedure setSource(AIS:IMemViewSource);
       function EOF:Boolean;inline;
-      function ParseString:String;
+      function ParseString:AnsiString;
   end;
 
 implementation
@@ -182,7 +182,7 @@ var
  {$OVERFLOWCHECKS OFF}
  {$RANGECHECKS OFF}
   InMemPos:PtrUInt;
-  pch:pchar;
+  pch:pansichar;
   i,n,optin:PtrInt;
   X4,T4,V4:Integer;
  {$ifdef cpu64}
@@ -308,11 +308,11 @@ begin
 end;
 
 
-function TZMemReader.ParseString:String;
+function TZMemReader.ParseString:AnsiString;
 var
   PEOL:int64;
   l:int64;
-  ts:string;
+  ts:AnsiString;
 begin
 {$ifdef fpc}
   {$push}

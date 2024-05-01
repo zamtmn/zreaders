@@ -22,7 +22,7 @@ unit uzMVSMemoryMappedFile;
 interface
 uses
   SysUtils,Classes,
-  uzMemView,BeRoFileMappedStream;
+  BeRoFileMappedStream,uzMemViewInterface;
 type
 
   TZMVSMemoryMappedFile=class(TBeRoFileMappedStream,IMemViewSource)

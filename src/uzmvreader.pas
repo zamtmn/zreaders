@@ -23,7 +23,7 @@ unit uzMVReader;
 interface
 uses
   SysUtils,Classes,
-  uzMemView;
+  uzMemViewInterface;
 
 type
   TSetOfBytes=set of AnsiChar;

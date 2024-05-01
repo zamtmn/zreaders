@@ -21,9 +21,8 @@ unit uzMVSReadBufStream;
 
 interface
 uses
-  SysUtils,Classes,
-  uzMemView,
-  bufstream;
+  SysUtils,Classes,bufstream,
+  uzMemViewInterface;
 
 type
   TZMVSReadBufStream=class(TReadBufStream,IMemViewSource)

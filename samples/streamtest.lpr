@@ -1,8 +1,7 @@
 program streamtest;
 uses
  SysUtils,
- uzMemReader,
- uzReadBufStreamMVSource,uzMVSMemoryMappedFile,
+ uzMVReader,uzMVSMemoryMappedFile,uzMVSReadBufStream,
  bufstream;
 
 var
@@ -59,7 +58,7 @@ end;
 procedure testBufferedFileStream;
 var
   newStream:TBufferedFileStream;
-  bs:TZReadBufStream;
+  bs:TZMVSReadBufStream;
   mr:TZMemReader;
   intValue:integer;
   LinesCount:int64;
@@ -70,7 +69,7 @@ begin
   LinesCount:=0;
   intValue:=1;
   newStream:=TBufferedFileStream.Create(filename,fmOpenRead);
-  bs:=TZReadBufStream.Create(newStream);
+  bs:=TZMVSReadBufStream.Create(newStream);
   bs.MoveMemViewProc(0);
   mr:=TZMemReader.Create;
   mr.setSource(bs);

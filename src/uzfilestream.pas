@@ -222,6 +222,9 @@ const
   OVERFLOW_MASK8=Int64($8080808080808080);
  {$endif}
 var
+ {$push}
+ {$OVERFLOWCHECKS OFF}
+ {$RANGECHECKS OFF}
   InMemPos:PtrUInt;
   pch:pchar;
   i,n,optin:PtrInt;
@@ -230,7 +233,7 @@ var
   X8,T8,V8:Int64;
  {$endif}
 begin
-  {$ifdef FPC_LITTLE_ENDIAN}
+ {$ifdef FPC_LITTLE_ENDIAN}
   SkipEOLifNeed;
 
   InMemPos:=fInMemPosition;
@@ -332,9 +335,10 @@ begin
     result:=InMemPos
   else
     result:=CNotInThisPage;
-  {$else}
+ {$else}
   {$Error Not Implemented}
-  {$endif}
+ {$endif}
+ {$pop}
 end;
 
 
@@ -344,6 +348,9 @@ var
   l:int64;
   ts:string;
 begin
+ {$push}
+ {$OVERFLOWCHECKS OFF}
+ {$RANGECHECKS OFF}
   PEOL:=FindEOL;
   if PEOL=fInMemPosition then
     exit('')
@@ -360,6 +367,7 @@ begin
     {//}Move(fMemory[fInMemPosition],Result[1],l);
     fInMemPosition:=PEOL;
   end;
+ {$pop}
 end;
 
 begin

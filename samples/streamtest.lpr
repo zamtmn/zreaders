@@ -1,95 +1,91 @@
 program streamtest;
+{$Mode objfpc}{$H+}
+
 uses
- SysUtils,
- uzMVReader,uzMVSMemoryMappedFile,uzMVSReadBufStream,
- bufstream;
+ SysUtils,bufstream,
+ uzMVReader,uzMVSMemoryMappedFile,uzMVSReadBufStream;
+
+type
+  TTestFunc=function(AFileName:string):int64;
 
 var
-  filename:string='test.dxf';
-procedure testReadLn;
+  DefaultFileName:string='test.dxf';
+
+function TestReadLn(AFileName:string):int64;
 var
   f:text;
-  LinesCount:int64;
-  LPTime:Tdatetime;
   s:string;
   buf:array[word]of byte;
 begin
-  LPTime:=now();
-  LinesCount:=0;
-  assign(f,filename);
+  Result:=0;
+  assign(f,AFileName);
   SetTextBuf(f,buf);
   reset(f);
   while not EOF(f) do begin
     readln(f,s);
-    inc(LinesCount);
+    inc(Result);
   end;
   Close(f);
-  lptime:=now()-LPTime;
-  writeln('Lines readed: ',LinesCount);
-  writeln('ReadLn+SetTextBuf(65536): '+inttostr(round(lptime*10e7))+'msec');
 end;
 
-procedure testMMF;
+function TestMMF(AFileName:string):int64;
 var
   newStream:TZMVSMemoryMappedFile;
   mr:TZMemReader;
-  intValue:integer;
-  LinesCount:int64;
-  LPTime:Tdatetime;
   s:String;
 begin
-  LPTime:=now();
-  LinesCount:=0;
-  intValue:=1;
-  newStream:=TZMVSMemoryMappedFile.Create(filename,fmOpenRead);
+  Result:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
   mr:=TZMemReader.Create;
   mr.setSource(newStream);
   while not mr.EOF do begin
     s:=mr.ParseString;
-    LinesCount:=LinesCount+intValue;
+    inc(result);
   end;
   newStream.Destroy;
   mr.Destroy;
-  lptime:=now()-LPTime;
-  writeln('Lines readed: ',LinesCount);
-  writeln('MMF: '+inttostr(round(lptime*10e7))+'msec');
 end;
 
-procedure testBufferedFileStream;
+function TestBufferedFileStream(AFileName:string):int64;
 var
   newStream:TBufferedFileStream;
   bs:TZMVSReadBufStream;
   mr:TZMemReader;
-  intValue:integer;
-  LinesCount:int64;
-  LPTime:Tdatetime;
   s:String;
 begin
-  LPTime:=now();
-  LinesCount:=0;
-  intValue:=1;
-  newStream:=TBufferedFileStream.Create(filename,fmOpenRead);
+  Result:=0;
+  newStream:=TBufferedFileStream.Create(AFileName,fmOpenRead);
   bs:=TZMVSReadBufStream.Create(newStream);
   bs.MoveMemViewProc(0);
   mr:=TZMemReader.Create;
   mr.setSource(bs);
   while not mr.EOF do begin
     s:=mr.ParseString;
-    LinesCount:=LinesCount+intValue;
+    inc(result);
   end;
   newStream.Destroy;
   bs.Destroy;
   mr.Destroy;
-  lptime:=now()-LPTime;
-  writeln('Lines readed: ',LinesCount);
-  writeln('BufferedFileStream+ReadBufStream: '+inttostr(round(lptime*10e7))+'msec');
+end;
+
+procedure DoTest(ATestFunc:TTestFunc;ATestName,AFileName:string);
+var
+  TestResult:int64;
+  LPTime:Tdatetime;
+begin
+  writeln(ATestName,':');
+  LPTime:=now();
+  TestResult:=ATestFunc(AFileName);
+  LPTime:=now()-LPTime;
+  writeln('  Test result  = ',TestResult);
+  writeln('  Time elapsed = '+inttostr(round(lptime*10e7))+'ms');
 end;
 
 begin
-  if ParamStr(1)<>'' then filename:=ParamStr(1);
-  //testReadLn;
-  testMMF;
-  testBufferedFileStream;
+  if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
+  DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
+  DoTest(@TestMMF,'Memory Mapped File',DefaultFileName);
+  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream',DefaultFileName);
 end.
 
 

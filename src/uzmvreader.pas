@@ -16,14 +16,14 @@
 @author(Andrey Zubarev <zamtmn@yandex.ru>) 
 }
 
-unit uzFileStream;
+unit uzMVReader;
 {$Mode objfpc}{$H+}
-{$Interfaces CORBA}
 {Inline off}
+
 interface
 uses
-  SysUtils,
-  Classes,BeRoFileMappedStream,bufstream;
+  SysUtils,Classes,
+  uzMemView;
 
 type
   TSetOfBytes=set of AnsiChar;
@@ -34,34 +34,7 @@ const
   ChCR=#13;
   CNotInThisPage=low(TInMemReaderInt);//возвращаем когда конец строки не найден на текущей странице
 type
-
-  TMemViewInfo=record
-    Memory:pointer;
-    CurrentViewOffset:int64;
-    CurrentViewSize:int64;
-    Position:int64;
-    Size:int64;
-  end;
-  TMoveMemViewProc=function (ANewPosition:int64):TMemViewInfo of object;
-
-  IMemViewSource=interface
-    function MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
-    function GetMemViewInfo:TMemViewInfo;
-  end;
-
-  TZFileStream2=class(TBeRoFileMappedStream,IMemViewSource)
-
-    function MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
-    function GetMemViewInfo:TMemViewInfo;
-  end;
-
-  TZReadBufStream=class(TReadBufStream,IMemViewSource)
-
-    function MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
-    function GetMemViewInfo:TMemViewInfo;
-  end;
-
-  TZInMemoryReader=class
+  TZMemReader=class
     protected
       type
         TCurrentViewPos=(CVPNext  //не последняя страница
@@ -89,43 +62,14 @@ type
 
 implementation
 
-function TZFileStream2.GetMemViewInfo:TMemViewInfo;
-begin
-  result.Memory:=fMemory;
-  result.CurrentViewOffset:=fCurrentViewOffset;
-  result.CurrentViewSize:=fCurrentViewSize;
-  result.Position:=fPosition;
-  result.Size:=fSize;
-end;
-function TZFileStream2.MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
-begin
-  Seek(ANewPosition,soBeginning);
-  result:=GetMemViewInfo;
-end;
-
-function TZReadBufStream.GetMemViewInfo:TMemViewInfo;
-begin
-  result.Memory:=buffer;
-  result.Position:=GetPosition;
-  result.Size:=GetSize;
-  result.CurrentViewSize:=Capacity;
-  result.CurrentViewOffset:=result.Position-(result.Position mod result.CurrentViewSize);
-end;
-function TZReadBufStream.MoveMemViewProc(ANewPosition:int64):TMemViewInfo;
-begin
-  Seek(ANewPosition,soBeginning);
-  result:=GetMemViewInfo;
-  FillBuffer;
-end;
-
-procedure TZInMemoryReader.ResetLastChar;
+procedure TZMemReader.ResetLastChar;
 begin
   if fInMemPosition>0 then
     dec(fInMemPosition);
 end;
 
 
-function TZInMemoryReader.fastReadByte:byte;
+function TZMemReader.fastReadByte:byte;
 begin
   result:=fMemory[fInMemPosition];
   if (fInMemPosition<(fCurrentViewSize-1))or((fInMemPosition+fCurrentViewOffset)=(fSize-1)) then
@@ -136,7 +80,7 @@ begin
 end;
 
 
-function TZInMemoryReader.EOF:Boolean;
+function TZMemReader.EOF:Boolean;
 begin
   SkipEOLifNeed;
   if FCurrentViewPos<>CVPLast then
@@ -145,7 +89,7 @@ begin
     result:=(fCurrentViewOffset+fInMemPosition)>=fSize;
 end;
 
-procedure TZInMemoryReader.setFromTMemViewInfo(AMVI:TMemViewInfo);
+procedure TZMemReader.setFromTMemViewInfo(AMVI:TMemViewInfo);
 begin
   with AMVI do begin
     fMemory:=Memory;
@@ -163,21 +107,21 @@ begin
   end;
 end;
 
-procedure TZInMemoryReader.setSource(AIS:IMemViewSource);
+procedure TZMemReader.setSource(AIS:IMemViewSource);
 begin
   fIS:=AIS;
   FNeedScipEOL:=false;
   setFromTMemViewInfo(fIS.GetMemViewInfo);
 end;
 
-procedure TZInMemoryReader.SkipEOLifNeed;
+procedure TZMemReader.SkipEOLifNeed;
 begin
   if FNeedScipEOL then begin
     SkipEOL;
     FNeedScipEOL:=false;
   end;
 end;
-procedure TZInMemoryReader.SkipEOL;
+procedure TZMemReader.SkipEOL;
 var
   CurrentByte:Byte;
   CurrentWord:Word;
@@ -209,7 +153,7 @@ begin
 end;
 
 
-function TZInMemoryReader.FindEOL:int64;
+function TZMemReader.FindEOL:int64;
 const
   CR_XOR_MASK4=$0d0d0d0d;
   LF_XOR_MASK4=$0a0a0a0a;
@@ -342,7 +286,7 @@ begin
 end;
 
 
-function TZInMemoryReader.ParseString:String;
+function TZMemReader.ParseString:String;
 var
   PEOL:int64;
   l:int64;

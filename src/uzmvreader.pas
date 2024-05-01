@@ -199,7 +199,11 @@ begin
       V8 := V8 and X8;
       T8 := T8 or V8;
       if (T8 and OVERFLOW_MASK8<>0) then begin
+        {$if DECLARED(BsfQWord)}
+        n := BsfQWord(T8 and OVERFLOW_MASK8) shr 3;
+        {$else}
         n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
+        {$endif}
         FNeedScipEOL:=True;
         inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
         exit(InMemPos);
@@ -225,7 +229,11 @@ begin
       V4 := V4 and X4;
       T4 := T4 or V4;
       if (T4 and OVERFLOW_MASK4)<>0 then begin
+        {$if DECLARED(BsrDWord)}
+        n := BsrDWord(T4 and OVERFLOW_MASK4) shr 3;
+        {$else}
         n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
+        {$endif}
         FNeedScipEOL:=True;
         inc(InMemPos,(optin-i)*sizeof(dword)-(4-n));
         exit(InMemPos);

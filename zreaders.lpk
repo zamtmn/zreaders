@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="5">
+    <PathDelim Value="\"/>
+    <Name Value="zreaders"/>
+    <Type Value="RunAndDesignTime"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <OtherUnitFiles Value="src"/>
+        <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)\"/>
+      </SearchPaths>
+    </CompilerOptions>
+    <Files>
+      <Item>
+        <Filename Value="src\berofilemappedstream.pas"/>
+        <UnitName Value="BeRoFileMappedStream"/>
+      </Item>
+      <Item>
+        <Filename Value="src\uzmemviewinterface.pas"/>
+        <UnitName Value="uzMemViewInterface"/>
+      </Item>
+      <Item>
+        <Filename Value="src\uzmvreader.pas"/>
+        <UnitName Value="uzMVReader"/>
+      </Item>
+      <Item>
+        <Filename Value="src\uzmvsmemorymappedfile.pas"/>
+        <UnitName Value="uzMVSMemoryMappedFile"/>
+      </Item>
+      <Item>
+        <Filename Value="src\uzmvsreadbufstream.pas"/>
+        <UnitName Value="uzMVSReadBufStream"/>
+      </Item>
+    </Files>
+    <RequiredPkgs>
+      <Item>
+        <PackageName Value="FCL"/>
+      </Item>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <UseFileFilters Value="True"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>

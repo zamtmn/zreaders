@@ -58,6 +58,7 @@ type
         fIS:IMemViewSource;
         FCurrentViewPos:TCurrentViewPos;
         FNeedScipEOL:boolean;
+      function GetCurrentPos:TInMemReaderInt;
       function FindEOL:int64;inline;
       procedure SkipEOL;inline;
       procedure SkipEOLifNeed;inline;
@@ -68,9 +69,17 @@ type
       procedure setSource(AIS:IMemViewSource);
       function EOF:Boolean;inline;
       function ParseString:AnsiString;
+      function ParseString2:AnsiString;
+      property Size:TInMemReaderInt read fSize;
+      property CurrentPos:TInMemReaderInt read GetCurrentPos;
   end;
 
 implementation
+
+function TZMemReader.GetCurrentPos:TInMemReaderInt;
+begin
+  result:=fCurrentViewOffset+fCurrentViewSize;
+end;
 
 procedure TZMemReader.ResetLastChar;
 begin
@@ -306,9 +315,21 @@ begin
   {$pop}
 {$endif}
 end;
-
-
 function TZMemReader.ParseString:AnsiString;
+var
+  i:integer;
+begin
+  result:=ParseString2;
+  i:=1;
+  if result<>'' then begin
+    while (result[i]=' ')and(i<length(result)) do
+      inc(i);
+    if i>1 then
+      result:=copy(result,i,length(result)-i+1);
+  end;
+end;
+
+function TZMemReader.ParseString2:AnsiString;
 var
   PEOL:int64;
   l:int64;

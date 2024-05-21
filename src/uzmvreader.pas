@@ -253,8 +253,8 @@ begin
       V4 := V4 and X4;
       T4 := T4 or V4;
       if (T4 and OVERFLOW_MASK4)<>0 then begin
-        {$if DECLARED(BsrDWord)}
-        n := BsrDWord(T4 and OVERFLOW_MASK4) shr 3;
+        {$if DECLARED(BsfDWord)}
+        n := BsfDWord(T4 and OVERFLOW_MASK4) shr 3;
         {$else}
         n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
         {$endif}
@@ -285,7 +285,7 @@ begin
       if (T4 and OVERFLOW_MASK4)<>0 then begin
         n := Byte(Byte(T4 and $80 = 0));
         FNeedScipEOL:=True;
-        inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
+        inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
         exit(InMemPos);
       end;
       inc(pword(pch));
@@ -397,8 +397,10 @@ begin
       V4 := V4 and X4;
       T4 := T4 or V4;
       if ((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4)<>0 then begin
+        n:=(T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4;
+        n := BsfDWord((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
         {$if DECLARED(BsrDWord)}
-        n := BsrDWord((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4) shr 3;
+        n := BsfDWord((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4) shr 3;
         {$else}
         n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
         {$endif}
@@ -427,7 +429,7 @@ begin
       T4 := T4 or V4;
       if ((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4)<>0 then begin
         n := Byte(Byte(((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4) = 0));
-        inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
+        inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
         exit(InMemPos);
       end;
       inc(pword(pch));
@@ -438,7 +440,7 @@ begin
 
   //остатки проверяем по байту
   for i:=n-1 downto 0 do begin
-    if byte(pch^)<14 then
+    if byte(pch^)>32 then
       if (pch^<>ChSpace)and(pch^<>ChTab) then begin  //pch^ in CLFCR медленней в 2 раза
         inc(InMemPos,n-i-1);
         exit(InMemPos);

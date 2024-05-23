@@ -73,6 +73,8 @@ type
       function EOF:Boolean;inline;
       function ParseString:AnsiString;
       function ParseString2:AnsiString;
+      procedure SkipString;
+      procedure SkipString2;
       property Size:TInMemReaderInt read fSize;
       property CurrentPos:TInMemReaderInt read GetCurrentPos;
   end;
@@ -506,6 +508,47 @@ begin
     {//}l:=PEOL-fInMemPosition;
     {//}SetLength(Result,l);
     {//}Move(fMemory[fInMemPosition],Result[1],l);
+    fInMemPosition:=PEOL;
+  end;
+{$ifdef fpc}
+  {$pop}
+{$endif}
+end;
+
+
+procedure TZMemReader.SkipString;
+var
+  PEOL:int64;
+begin
+  PEOL:=SkipSpaces;
+  if PEOL=CNotInThisPage then begin
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    SkipString();
+  end else begin
+    fInMemPosition:=PEOL;
+    SkipString2;
+  end;
+end;
+
+procedure TZMemReader.SkipString2;
+var
+  PEOL:int64;
+begin
+{$ifdef fpc}
+  {$push}
+{$endif}
+ {$OVERFLOWCHECKS OFF}
+ {$RANGECHECKS OFF}
+  PEOL:=FindEOL;
+  if PEOL=fInMemPosition then
+    //сразу встретился перевод строки, пустая строка
+    exit
+  else if PEOL=CNotInThisPage then begin
+    //уперлись в границу области отображения, двигаем и читаем дальше
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    SkipString2();
+  end else begin
+    //Конец строки найден, создаем и возвращаем строку
     fInMemPosition:=PEOL;
   end;
 {$ifdef fpc}

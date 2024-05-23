@@ -75,6 +75,8 @@ type
       function ParseString2:AnsiString;
       procedure SkipString;
       procedure SkipString2;
+      function ParseInteger:Integer;
+      function ParseInteger2:Integer;
       property Size:TInMemReaderInt read fSize;
       property CurrentPos:TInMemReaderInt read GetCurrentPos;
   end;
@@ -223,10 +225,10 @@ begin
       V8 := X8 + SUB_MASK8;
       X8 := (not X8);
       V8 := V8 and X8;
-      T8 := T8 or V8;
-      if (T8 and OVERFLOW_MASK8<>0) then begin
+      T8 := (T8 or V8) and OVERFLOW_MASK8;
+      if (T8<>0) then begin
         {$if DECLARED(BsfQWord)}
-        n := BsfQWord(T8 and OVERFLOW_MASK8) shr 3;
+        n := BsfQWord(T8) shr 3;
         {$else}
         n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
         {$endif}
@@ -253,10 +255,10 @@ begin
       V4 := X4 + SUB_MASK4;
       X4 := (not X4);
       V4 := V4 and X4;
-      T4 := T4 or V4;
-      if (T4 and OVERFLOW_MASK4)<>0 then begin
+      T4 := (T4 or V4) and OVERFLOW_MASK4;
+      if T4<>0 then begin
         {$if DECLARED(BsfDWord)}
-        n := BsfDWord(T4 and OVERFLOW_MASK4) shr 3;
+        n := BsfDWord(T4) shr 3;
         {$else}
         n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
         {$endif}
@@ -283,8 +285,8 @@ begin
       V4 := X4 + SUB_MASK4;
       X4 := (not X4);
       V4 := V4 and X4;
-      T4 := T4 or V4;
-      if (T4 and OVERFLOW_MASK4)<>0 then begin
+      T4 := (T4 or V4) and OVERFLOW_MASK4;
+      if T4<>0 then begin
         n := Byte(Byte(T4 and $80 = 0));
         FNeedScipEOL:=True;
         inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
@@ -555,6 +557,90 @@ begin
   {$pop}
 {$endif}
 end;
+
+function TZMemReader.ParseInteger:Integer;
+var
+  PEOL:int64;
+begin
+  PEOL:=SkipSpaces;
+  if PEOL=CNotInThisPage then begin
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    result:=ParseInteger();
+  end else begin
+    fInMemPosition:=PEOL;
+    result:=ParseInteger2;
+  end;
+end;
+
+function TZMemReader.ParseInteger2:Integer;
+function onedigit(d:byte):integer;inline;
+begin
+  if d in [ord('0')..ord('9')] then
+    result:=ord(d)-ord('0')
+  else
+    raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+end;
+function toInt(const bts:array of byte):integer;inline;
+var
+  l,i:integer;
+begin
+  case length(bts) of
+    1:result:=onedigit(bts[0]);
+    2:begin
+        if bts[0]=ord('-') then
+          result:=-onedigit(bts[1])
+        else if bts[0]=ord('+') then
+          result:=onedigit(bts[1])
+        else
+          result:=10*onedigit(bts[0])+onedigit(bts[1]);
+      end;
+    else begin
+      l:=low(bts);
+      if (bts[0]=ord('-'))or(bts[0]=ord('+')) then
+        inc(l);
+      result:=0;
+      for i:=l to High(bts) do
+        result:=result*10+onedigit(bts[i]);
+      if bts[0]=ord('-') then
+        result:=-result;
+    end;
+  end;
+end;
+var
+  PEOL:int64;
+  l:int64;
+  ts,resultStr:AnsiString;
+  code:integer;
+begin
+  {$ifdef fpc}
+    {$push}
+  {$endif}
+   { $OVERFLOWCHECKS OFF}
+   { $RANGECHECKS OFF}
+    PEOL:=FindEOL;
+    if PEOL=fInMemPosition then
+      //сразу встретился перевод строки, пустая строка
+      raise EConvertError.Create('TZMemReader.ParseInteger2 empty string')
+    else if PEOL=CNotInThisPage then begin
+      //уперлись в границу области отображения, двигаем и читаем дальше
+      l:=fCurrentViewSize-fInMemPosition;
+      SetLength(resultStr,l);
+      Move(fMemory[fInMemPosition],resultStr[1],l);
+      setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+      ts:=ParseString2();
+      val(resultStr+ts,result,code);
+      if code<>0 then
+        raise EConvertError.Create('TZMemReader.ParseInteger2 val with error')
+    end else begin
+      //Конец строки найден, парсим цыфры
+      result:=toInt(fMemory[fInMemPosition..PEOL-1]);
+      fInMemPosition:=PEOL;
+    end;
+  {$ifdef fpc}
+    {$pop}
+  {$endif}
+end;
+
 
 begin
 end.

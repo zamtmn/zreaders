@@ -77,6 +77,8 @@ type
       procedure SkipString2;
       function ParseInteger:Integer;
       function ParseInteger2:Integer;
+      function ParseDouble:Double;
+      function ParseDouble2:Double;
       property Size:TInMemReaderInt read fSize;
       property CurrentPos:TInMemReaderInt read GetCurrentPos;
   end;
@@ -369,11 +371,10 @@ begin
       V8 := X8 + SUB_MASK8;
       X8 := (not X8);
       V8 := V8 and X8;
-      T8 := T8 or V8;
-      if (((T8 and OVERFLOW_MASK8)xor OVERFLOW_MASK8)<>0) then begin
-        n :=(T8 and OVERFLOW_MASK8)xor OVERFLOW_MASK8;
+      T8 := ((T8 or V8) and OVERFLOW_MASK8) xor OVERFLOW_MASK8;
+      if T8<>0 then begin
         {$if DECLARED(BsfQWord)}
-        n := BsfQWord((T8 and OVERFLOW_MASK8)XOR OVERFLOW_MASK8) shr 3;
+        n := BsfQWord(T8) shr 3;
         {$else}
         n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
         {$endif}
@@ -399,12 +400,10 @@ begin
       V4 := X4 + SUB_MASK4;
       X4 := (not X4);
       V4 := V4 and X4;
-      T4 := T4 or V4;
-      if ((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4)<>0 then begin
-        n:=(T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4;
-        n := BsfDWord((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
+      T4 := (((T4 or V4)and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
+      if T4<>0 then begin
         {$if DECLARED(BsrDWord)}
-        n := BsfDWord((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4) shr 3;
+        n := BsfDWord(T4) shr 3;
         {$else}
         n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
         {$endif}
@@ -430,9 +429,9 @@ begin
       V4 := X4 + SUB_MASK4;
       X4 := (not X4);
       V4 := V4 and X4;
-      T4 := T4 or V4;
-      if ((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4)<>0 then begin
-        n := Byte(Byte(((T4 and OVERFLOW_MASK4)xor OVERFLOW_MASK4) = 0));
+      T4 := (((T4 or V4) and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
+      if T4<>0 then begin
+        n := Byte(T4 = 0);
         inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
         exit(InMemPos);
       end;
@@ -641,6 +640,69 @@ begin
   {$endif}
 end;
 
+function TZMemReader.ParseDouble:Double;
+var
+  PEOL:int64;
+begin
+  PEOL:=SkipSpaces;
+  if PEOL=CNotInThisPage then begin
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    result:=ParseDouble();
+  end else begin
+    fInMemPosition:=PEOL;
+    result:=ParseDouble2;
+  end;
+end;
+
+function TZMemReader.ParseDouble2:Double;
+var
+  PEOL:int64;
+  l:int64;
+  ts,resultStr:AnsiString;
+  ts255:shortstring;
+  code:integer;
+begin
+  {$ifdef fpc}
+    {$push}
+  {$endif}
+   { $OVERFLOWCHECKS OFF}
+   { $RANGECHECKS OFF}
+    PEOL:=FindEOL;
+    if PEOL=fInMemPosition then
+      //сразу встретился перевод строки, пустая строка
+      raise EConvertError.Create('TZMemReader.ParseDouble2 empty string')
+    else if PEOL=CNotInThisPage then begin
+      //уперлись в границу области отображения, двигаем и читаем дальше
+      l:=fCurrentViewSize-fInMemPosition;
+      SetLength(resultStr,l);
+      Move(fMemory[fInMemPosition],resultStr[1],l);
+      setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+      ts:=ParseString2();
+      val(resultStr+ts,result,code);
+      if code<>0 then
+        raise EConvertError.Create('TZMemReader.ParseDouble2 val with error')
+    end else begin
+      //Конец строки найден, парсим цыфры
+      l:=PEOL-fInMemPosition;
+      if l<256 then begin
+        SetLength(ts255,l);
+        Move(fMemory[fInMemPosition],ts255[1],l);
+        val(ts255,result,code);
+        if code<>0 then
+          raise EConvertError.Create('TZMemReader.ParseDouble2 val with error')
+      end else begin
+        SetLength(resultStr,l);
+        Move(fMemory[fInMemPosition],resultStr[1],l);
+        val(resultStr,result,code);
+        if code<>0 then
+          raise EConvertError.Create('TZMemReader.ParseDouble2 val with error')
+      end;
+      fInMemPosition:=PEOL;
+    end;
+  {$ifdef fpc}
+    {$pop}
+  {$endif}
+end;
 
 begin
 end.

@@ -13,7 +13,7 @@ type
   TTestFunc=function(AFileName:string):int64;
 
 var
-  DefaultFileName:string='test.dxf';
+  DefaultFileName:string='Correct.txt';//'test.dxf';
 
 function TestReadLn(AFileName:string):int64;
 var
@@ -32,7 +32,7 @@ begin
   Close(f);
 end;
 
-function TestMMF(AFileName:string):int64;
+function TestMMFParseString(AFileName:string):int64;
 var
   newStream:TZMVSMemoryMappedFile;
   mr:TZMemReader;
@@ -49,6 +49,42 @@ begin
   newStream.Destroy;
   mr.Destroy;
 end;
+
+function TestMMFSkipString(AFileName:string):int64;
+var
+  newStream:TZMVSMemoryMappedFile;
+  mr:TZMemReader;
+begin
+  Result:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
+  mr:=TZMemReader.Create;
+  mr.setSource(newStream);
+  while not mr.EOF do begin
+    mr.SkipString;
+    inc(result);
+  end;
+  newStream.Destroy;
+  mr.Destroy;
+end;
+
+function TestMMFParseInteger(AFileName:string):int64;
+var
+  newStream:TZMVSMemoryMappedFile;
+  mr:TZMemReader;
+begin
+  Result:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
+  mr:=TZMemReader.Create;
+  mr.setSource(newStream);
+  while not mr.EOF do begin
+    mr.ParseInteger;
+    inc(result);
+  end;
+  newStream.Destroy;
+  mr.Destroy;
+end;
+
+
 {$ifdef fpc}
 function TestBufferedFileStream(AFileName:string):int64;
 var
@@ -86,11 +122,16 @@ begin
 end;
 
 begin
+  writeln((inttohex(ord('0') or ord('1') or ord('2') or ord('3') or ord('4') or ord('5') or
+           ord('6') or ord('7') or ord('8') or ord('9'))));
+  writeln(inttohex(byte(not $3f)));
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
   //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
-  DoTest(@TestMMF,'Memory Mapped File',DefaultFileName);
+  DoTest(@TestMMFParseString,'Memory Mapped File (ParseString)',DefaultFileName);
+  DoTest(@TestMMFSkipString,'Memory Mapped File (SkipString)',DefaultFileName);
+  DoTest(@TestMMFParseinteger,'Memory Mapped File (ParseInteger)',DefaultFileName);
   {$ifdef fpc}
-  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream',DefaultFileName);
+  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream (ParseString)',DefaultFileName);
   {$endif}
 end.
 

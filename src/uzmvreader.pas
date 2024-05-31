@@ -40,6 +40,18 @@ type
  {$endif}
 
 const
+  BCDToInt:array [0..$99] of integer=
+   //0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f
+   (00,10,20,30,40,50,60,70,80,90,-1,-1,-1,-1,-1,-1,
+    01,11,21,31,41,51,61,71,81,91,-1,-1,-1,-1,-1,-1,
+    02,12,22,32,42,52,62,72,82,92,-1,-1,-1,-1,-1,-1,
+    03,13,23,33,43,53,63,73,83,93,-1,-1,-1,-1,-1,-1,
+    04,14,24,34,44,54,64,74,84,94,-1,-1,-1,-1,-1,-1,
+    05,15,25,35,45,55,65,75,85,95,-1,-1,-1,-1,-1,-1,
+    06,16,26,36,46,56,66,76,86,96,-1,-1,-1,-1,-1,-1,
+    07,17,27,37,47,57,67,77,87,97,-1,-1,-1,-1,-1,-1,
+    08,18,28,38,48,58,68,78,88,98,-1,-1,-1,-1,-1,-1,
+    09,19,29,39,49,59,69,79,89,99);
   ChLF=#10;
   ChCR=#13;
   ChTab=#09;
@@ -572,20 +584,150 @@ begin
 end;
 
 function TZMemReader.ParseInteger2:Integer;
-function onedigit(d:byte):integer;inline;
+function onedigit(const d:byte):Cardinal;inline;
 begin
-  if d in [ord('0')..ord('9')] then
-    result:=ord(d)-ord('0')
-  else
+  //if (d>ord('/'))and(d<ord(':')){d in [ord('0')..ord('9')]} then
+  result:=ord(d)-ord('0');
+  //else
+  if result>10 then
     raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
 end;
-function toInt(const bts:array of byte):integer;inline;
+function OldtoUInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
 var
-  l,i:integer;
+  i:integer;
 begin
-  case length(bts) of
+  case l of
+    1:result:=onedigit(bts[0]);
+    2:result:=10*onedigit(bts[0])+onedigit(bts[1]);
+    //3:result:=100*onedigit(bts[0])+10*onedigit(bts[1])+onedigit(bts[2]);
+    //4:result:=1000*onedigit(bts[0])+100*onedigit(bts[1])+10*onedigit(bts[2])+onedigit(bts[3]);
+    //5:result:=10000*onedigit(bts[0])+1000*onedigit(bts[1])+100*onedigit(bts[2])+10*onedigit(bts[3])+onedigit(bts[4]);
+    else begin
+      result:=onedigit(bts[0]);
+      for i:=1 to l-1 do
+        result:=result*10+onedigit(bts[i]);
+    end;
+  end;
+end;
+function toUInt(bts:pbyte; l:integer):integer;inline;
+var
+  r:integer;
+  i,optin:integer;
+  w,wt,wt2:word;
+  d,dt,dt2:DWord;
+  q,qt,qt2:QWord;
+begin
+  if (l and 1)>0 then begin
+    result:=onedigit(bts[0]);
+    dec(l);inc(bts);
+  end else
+    result:=0;
+
+  {$ifdef cpu64}
+  optin:=l div sizeof(qword);
+  if optin>0 then begin
+    for i:=optin-1 downto 0 do begin
+      q:=pqword(bts)^;
+
+      qt:=q and $c0c0c0c0c0c0c0c0;
+      q:=q and $0f0f0f0f0f0f0f0f;
+      //qt2:=(q+$0606060606060606)and $f0f0f0f0f0f0f0f0;
+      if (qt or {qt2}(q+$0606060606060606)and $f0f0f0f0f0f0f0f0)<>0 then
+        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+
+      d:=lo(q);
+      w:=lo(d);
+      //w:=d;
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+      w:=hi(d);
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+      d:=hi(q);
+      w:=lo(d);
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+      w:=hi(d);
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+
+
+      {d:=lo(q);
+      w:=lo(d);
+      result:=result*100+10*(lo(w))+(hi(w));
+      w:=hi(d);
+      result:=result*100+10*(lo(w))+(hi(w));
+      d:=hi(q);
+      w:=lo(d);
+      result:=result*100+10*(lo(w))+(hi(w));
+      w:=hi(d);
+      result:=result*100+10*(lo(w))+(hi(w));}
+      //result:=result*10000+1000*onedigit(lo(w))+onedigit(hi(w))+100*onedigit(lo(w))+10*onedigit(lo(w))+onedigit(hi(w));
+      inc(pqword(bts));
+    end;
+    l:=l mod sizeof(qword);
+  end;
+  {$endif}
+
+  optin:=l div sizeof(dword);
+  if optin>0 then begin
+    for i:=optin-1 downto 0 do begin
+      d:=pdword(bts)^;
+      dt:=d and $c0c0c0c0;
+      d:=d and $0f0f0f0f;
+      //dt2:=(d+$06060606)and $f0f0f0f0;
+      if (dt or {dt2}(d+$06060606)and $f0f0f0f0)<>0 then
+        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+
+      {w:=lo(d);
+      result:=result*100+10*lo(w)+hi(w);
+      w:=hi(d);
+      result:=result*100+10*lo(w)+hi(w);}
+
+      w:=lo(d);
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+      w:=hi(d);
+      w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+
+      inc(pdword(bts));
+    end;
+    l:=l mod sizeof(dword);
+  end;
+
+  optin:=l div sizeof(word);
+  if optin>0 then begin
+    for i:=optin-1 downto 0 do begin
+      w:=pword(bts)^;
+      wt:=w and $c0c0;
+      w:=w and $0f0f;
+      //wt2:=(w+$0606)and $f0f0;
+      if (wt or {wt2}((w+$0606)and $f0f0))<>0 then
+        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+      {result:=result*100+10*lo(w)+hi(w);}
+       w:=(w shr 4)or w;
+      result:=result*100+BCDToInt[lo(w)];
+      inc(pword(bts));
+    end;
+    l:=l mod sizeof(word);
+  end;
+
+  {for i:=0 to l-1 do
+    result:=result*10+onedigit(bts[i]);}
+
+end;
+function toInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
+begin
+  case l of
     1:result:=onedigit(bts[0]);
     2:begin
+        {case bts[0] of
+          ord('-'):result:=-onedigit(bts[1]);
+          ord('+'):result:=+onedigit(bts[1]);
+          else
+            result:=10*onedigit(bts[0])+onedigit(bts[1]);
+        end;}
         if bts[0]=ord('-') then
           result:=-onedigit(bts[1])
         else if bts[0]=ord('+') then
@@ -594,21 +736,19 @@ begin
           result:=10*onedigit(bts[0])+onedigit(bts[1]);
       end;
     else begin
-      l:=low(bts);
-      if (bts[0]=ord('-'))or(bts[0]=ord('+')) then
-        inc(l);
-      result:=0;
-      for i:=l to High(bts) do
-        result:=result*10+onedigit(bts[i]);
-      if bts[0]=ord('-') then
-        result:=-result;
+      if (bts[0]=ord('-'))or(bts[0]=ord('+')) then begin
+        result:={toUInt}oldtoUInt(@bts[1],l-1);
+        if bts[0]=ord('-') then
+         result:=-result;
+      end else
+        result:={toUInt}oldtoUInt(@bts[0],l);
     end;
   end;
 end;
 var
   PEOL:int64;
   l:int64;
-  ts,resultStr:AnsiString;
+  ts,resultStr:ShortString;
   code:integer;
 begin
   {$ifdef fpc}
@@ -632,7 +772,12 @@ begin
         raise EConvertError.Create('TZMemReader.ParseInteger2 val with error')
     end else begin
       //Конец строки найден, парсим цыфры
-      result:=toInt(fMemory[fInMemPosition..PEOL-1]);
+      //вариант с копированием
+      //l:=PEOL-fInMemPosition;
+      //SetLength(resultStr,l);
+      //Move(fMemory[fInMemPosition],resultStr[1],l);
+      //val(resultStr,result,code);
+      result:=toInt(@fMemory[fInMemPosition],PEOL-fInMemPosition);
       fInMemPosition:=PEOL;
     end;
   {$ifdef fpc}

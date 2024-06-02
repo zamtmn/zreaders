@@ -481,7 +481,6 @@ end;
 function TZMemReader.ParseString:AnsiString;
 var
   PEOL:int64;
-  i:integer;
 begin
   PEOL:=SkipSpaces;
   if PEOL=CNotInThisPage then begin
@@ -586,10 +585,8 @@ end;
 function TZMemReader.ParseInteger2:Integer;
 function onedigit(const d:byte):Cardinal;inline;
 begin
-  //if (d>ord('/'))and(d<ord(':')){d in [ord('0')..ord('9')]} then
   result:=ord(d)-ord('0');
-  //else
-  if result>10 then
+  if result>9 then
     raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
 end;
 function OldtoUInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
@@ -611,16 +608,17 @@ begin
 end;
 function toUInt(bts:pbyte; l:integer):integer;inline;
 var
-  r:integer;
   i,optin:integer;
-  w,wt,wt2:word;
-  d,dt,dt2:DWord;
-  q,qt,qt2:QWord;
+  w,w0,w1,w2,w3,wt:word;
+  d,dt:DWord;
+  q,qt:QWord;
+  errbits:QWord;
 begin
-  if (l and 1)>0 then begin
+  errbits:=0;
+  {if (l and 1)>0 then begin
     result:=onedigit(bts[0]);
     dec(l);inc(bts);
-  end else
+  end else}
     result:=0;
 
   {$ifdef cpu64}
@@ -631,41 +629,29 @@ begin
 
       qt:=q and $c0c0c0c0c0c0c0c0;
       q:=q and $0f0f0f0f0f0f0f0f;
-      //qt2:=(q+$0606060606060606)and $f0f0f0f0f0f0f0f0;
-      if (qt or {qt2}(q+$0606060606060606)and $f0f0f0f0f0f0f0f0)<>0 then
-        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+
+      errbits:=errbits or (qt or (q+$0606060606060606)and $f0f0f0f0f0f0f0f0);
 
       d:=lo(q);
-      w:=lo(d);
-      //w:=d;
-      w:=(w shr 4)or w;
-      result:=result*100+BCDToInt[lo(w)];
-      w:=hi(d);
-      w:=(w shr 4)or w;
-      result:=result*100+BCDToInt[lo(w)];
+      w3:=lo(d);
+      w3:=(w3 shr 4)or w3;
+      //result:=result*100+BCDToInt[lo(w)];
+      w2:=hi(d);
+      w2:=(w2 shr 4)or w2;
+      //result:=result*100+BCDToInt[lo(w2)];
       d:=hi(q);
-      w:=lo(d);
-      w:=(w shr 4)or w;
-      result:=result*100+BCDToInt[lo(w)];
-      w:=hi(d);
-      w:=(w shr 4)or w;
-      result:=result*100+BCDToInt[lo(w)];
+      w1:=lo(d);
+      w1:=(w1 shr 4)or w1;
+      //result:=result*100+BCDToInt[lo(w1)];
+      w0:=hi(d);
+      w0:=(w0 shr 4)or w0;
+      //result:=result*100+BCDToInt[lo(w0)];
 
+      result:=result*1000000+BCDToInt[lo(w3)]*10000+BCDToInt[lo(w2)]*10000+BCDToInt[lo(w1)]*100+BCDToInt[lo(w0)];
 
-      {d:=lo(q);
-      w:=lo(d);
-      result:=result*100+10*(lo(w))+(hi(w));
-      w:=hi(d);
-      result:=result*100+10*(lo(w))+(hi(w));
-      d:=hi(q);
-      w:=lo(d);
-      result:=result*100+10*(lo(w))+(hi(w));
-      w:=hi(d);
-      result:=result*100+10*(lo(w))+(hi(w));}
-      //result:=result*10000+1000*onedigit(lo(w))+onedigit(hi(w))+100*onedigit(lo(w))+10*onedigit(lo(w))+onedigit(hi(w));
       inc(pqword(bts));
     end;
-    l:=l mod sizeof(qword);
+    l:=l and 3;//l mod sizeof(qword);
   end;
   {$endif}
 
@@ -675,14 +661,8 @@ begin
       d:=pdword(bts)^;
       dt:=d and $c0c0c0c0;
       d:=d and $0f0f0f0f;
-      //dt2:=(d+$06060606)and $f0f0f0f0;
-      if (dt or {dt2}(d+$06060606)and $f0f0f0f0)<>0 then
-        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
 
-      {w:=lo(d);
-      result:=result*100+10*lo(w)+hi(w);
-      w:=hi(d);
-      result:=result*100+10*lo(w)+hi(w);}
+      errbits:=errbits or (dt or {dt2}(d+$06060606)and $f0f0f0f0);
 
       w:=lo(d);
       w:=(w shr 4)or w;
@@ -693,7 +673,7 @@ begin
 
       inc(pdword(bts));
     end;
-    l:=l mod sizeof(dword);
+    l:=l and 3;//l mod sizeof(dword);
   end;
 
   optin:=l div sizeof(word);
@@ -702,19 +682,21 @@ begin
       w:=pword(bts)^;
       wt:=w and $c0c0;
       w:=w and $0f0f;
-      //wt2:=(w+$0606)and $f0f0;
-      if (wt or {wt2}((w+$0606)and $f0f0))<>0 then
-        raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
-      {result:=result*100+10*lo(w)+hi(w);}
-       w:=(w shr 4)or w;
+
+      errbits:=errbits or (wt or ((w+$0606)and $f0f0));
+
+      w:=(w shr 4)or w;
       result:=result*100+BCDToInt[lo(w)];
       inc(pword(bts));
     end;
-    l:=l mod sizeof(word);
+    l:=l and 1;
   end;
 
-  {for i:=0 to l-1 do
-    result:=result*10+onedigit(bts[i]);}
+  if errbits<>0 then
+    raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
+
+  for i:=0 to l-1 do
+    result:=result*10+onedigit(bts[i]);
 
 end;
 function toInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
@@ -737,18 +719,19 @@ begin
       end;
     else begin
       if (bts[0]=ord('-'))or(bts[0]=ord('+')) then begin
-        result:={toUInt}oldtoUInt(@bts[1],l-1);
+        result:={toUInt}OldtoUInt(@bts[1],l-1);
         if bts[0]=ord('-') then
          result:=-result;
       end else
-        result:={toUInt}oldtoUInt(@bts[0],l);
+        result:={toUInt}OldtoUInt(@bts[0],l);
     end;
   end;
 end;
 var
   PEOL:int64;
   l:int64;
-  ts,resultStr:ShortString;
+  ts:ShortString='';
+  resultStr:ShortString='';
   code:integer;
 begin
   {$ifdef fpc}
@@ -803,8 +786,9 @@ function TZMemReader.ParseDouble2:Double;
 var
   PEOL:int64;
   l:int64;
-  ts,resultStr:AnsiString;
-  ts255:shortstring;
+  ts:AnsiString='';
+  resultStr:AnsiString='';
+  ts255:shortstring='';
   code:integer;
 begin
   {$ifdef fpc}

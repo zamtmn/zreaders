@@ -6,111 +6,208 @@ program streamtest;
 {$endif}
 
 uses
- SysUtils,{$ifdef fpc}bufstream,{$endif}
+ SysUtils,{$ifdef fpc}bufstream,{$endif}StrUtils,Classes,
  uzMVReader,uzMVSMemoryMappedFile{$ifdef fpc},uzMVSReadBufStream{$endif};
 
+const
+  CLinesCount=10000000;
+  CModule=10;
+  CCharLen=1;
+
+resourcestring
+  RSLinesReadaed='%d lines with ints readed';
+  RSLinesReadaedWithSum='%d lines with ints readed, sum = %d';
+  RSFileExists='File "%s" already exists';
+  RSFileCreated='File "%s" created, %d lines with ints, sum = %d"';
+
 type
-  TTestFunc=function(AFileName:string):int64;
+  TTestFunc=function(AFileName:string):string;
 
 var
-  DefaultFileName:string='Correct.txt';//'test.dxf';
+  DefaultFileName:string='intnumbers.txt';//'test.dxf';
 
-function TestReadLn(AFileName:string):int64;
+function WritelnInts(AFileName:string):string;
+var
+  i:integer;
+  linescount,sum:Int64;
+  f:text;
+  s:ShortString;
+  buf:array[word]of byte;
+begin
+  if FileExists(AFileName) then
+    result:=format(RSFileExists,[AFileName])
+  else begin
+    assign(f,AFileName);
+    SetTextBuf(f,buf);
+    Rewrite(f);
+    sum:=123456789;
+    writeln(f,inttostr(sum));
+    linescount:=1;
+    for i:=1 to CLinesCount-1 do begin
+      s:=IntToStr(i mod CModule);
+      if length(s)<6 then
+        s:=s+DupeString('1',CCharLen-length(s));
+        writeln(f,s);
+      sum:=sum+strtoint(s);
+      inc(linescount);
+    end;
+    Close(f);
+    Result:=format(RSFileCreated,[AFileName,linescount,sum]);
+  end;
+end;
+
+function TestReadLn(AFileName:string):string;
 var
   f:text;
   s:AnsiString;
   buf:array[word]of byte;
+  linescount:int64;
 begin
-  Result:=0;
+  linescount:=0;
   assign(f,AFileName);
   SetTextBuf(f,buf);
   reset(f);
   while not EOF(f) do begin
     readln(f,s);
-    inc(Result);
+    inc(linescount);
   end;
   Close(f);
+  result:=format(RSLinesReadaed,[linescount]);
 end;
 
-function TestMMFParseString(AFileName:string):int64;
+function TestTStringList(AFileName:string):string;
+var
+  sl:TStringList;
+begin
+  sl:=TStringList.Create;
+  sl.LoadFromFile(AFileName);
+  result:=format(RSLinesReadaed,[sl.Count]);
+  sl.Destroy;
+end;
+
+function TestTStringListPlusIntToStr(AFileName:string):string;
+var
+  sl:TStringList;
+  sum:int64;
+  i:integer;
+begin
+  sl:=TStringList.Create;
+  sl.LoadFromFile(AFileName);
+  sum:=0;
+  for i:=0 to sl.Count-1 do
+    sum:=sum+StrToInt(sl.strings[i]);
+  result:=format(RSLinesReadaedWithSum,[sl.Count,sum]);
+  sl.Destroy;
+end;
+
+function TestMMFSkipString(AFileName:string):string;
 var
   newStream:TZMVSMemoryMappedFile;
   mr:TZMemReader;
-  s:AnsiString;
+  linescount:int64;
 begin
-  Result:=0;
-  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
-  mr:=TZMemReader.Create;
-  mr.setSource(newStream);
-  while not mr.EOF do begin
-    s:=mr.ParseString;
-    inc(result);
-  end;
-  newStream.Destroy;
-  mr.Destroy;
-end;
-
-function TestMMFSkipString(AFileName:string):int64;
-var
-  newStream:TZMVSMemoryMappedFile;
-  mr:TZMemReader;
-begin
-  Result:=0;
+  linescount:=0;
   newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
   mr:=TZMemReader.Create;
   mr.setSource(newStream);
   while not mr.EOF do begin
     mr.SkipString;
-    inc(result);
+    inc(linescount);
   end;
   newStream.Destroy;
   mr.Destroy;
+  result:=format(RSLinesReadaed,[linescount]);
 end;
-
-function TestMMFParseInteger(AFileName:string):int64;
-var
-  newStream:TZMVSMemoryMappedFile;
-  mr:TZMemReader;
-begin
-  Result:=0;
-  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
-  mr:=TZMemReader.Create;
-  mr.setSource(newStream);
-  while not mr.EOF do begin
-    mr.ParseInteger;
-    inc(result);
-  end;
-  newStream.Destroy;
-  mr.Destroy;
-end;
-
 
 {$ifdef fpc}
-function TestBufferedFileStream(AFileName:string):int64;
+function TestBufferedFileStream(AFileName:string):string;
 var
   newStream:TBufferedFileStream;
   bs:TZMVSReadBufStream;
   mr:TZMemReader;
-  s:AnsiString;
+  linescount:int64;
 begin
-  Result:=0;
+  linescount:=0;
   newStream:=TBufferedFileStream.Create(AFileName,fmOpenRead);
   bs:=TZMVSReadBufStream.Create(newStream);
   bs.MoveMemViewProc(0);
   mr:=TZMemReader.Create;
   mr.setSource(bs);
   while not mr.EOF do begin
-    s:=mr.ParseString;
-    inc(result);
+    mr.SkipString;
+    inc(linescount);
   end;
   newStream.Destroy;
   bs.Destroy;
   mr.Destroy;
+  result:=format(RSLinesReadaed,[linescount]);
 end;
 {$endif}
+
+function TestMMFParseString(AFileName:string):string;
+var
+  newStream:TZMVSMemoryMappedFile;
+  mr:TZMemReader;
+  linescount:int64;
+begin
+  linescount:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
+  mr:=TZMemReader.Create;
+  mr.setSource(newStream);
+  while not mr.EOF do begin
+    mr.ParseString;
+    inc(linescount);
+  end;
+  newStream.Destroy;
+  mr.Destroy;
+  result:=format(RSLinesReadaed,[linescount]);
+end;
+
+function TestMMFParseStringPlusIntToStr(AFileName:string):string;
+var
+  newStream:TZMVSMemoryMappedFile;
+  mr:TZMemReader;
+  s:AnsiString;
+  linescount,sum:Int64;
+begin
+  linescount:=0;
+  sum:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
+  mr:=TZMemReader.Create;
+  mr.setSource(newStream);
+  while not mr.EOF do begin
+    s:=mr.ParseString;
+    sum:=sum+StrToInt(s);
+    inc(linescount);
+  end;
+  newStream.Destroy;
+  mr.Destroy;
+  Result:=format(RSLinesReadaedWithSum,[linescount,sum]);
+end;
+
+function TestMMFParseInteger(AFileName:string):string;
+var
+  newStream:TZMVSMemoryMappedFile;
+  mr:TZMemReader;
+  linescount,sum:Int64;
+begin
+  sum:=0;
+  linescount:=0;
+  newStream:=TZMVSMemoryMappedFile.Create(AFileName,fmOpenRead);
+  mr:=TZMemReader.Create;
+  mr.setSource(newStream);
+  while not mr.EOF do begin
+    sum:=sum+mr.ParseInteger;
+    inc(linescount);
+  end;
+  newStream.Destroy;
+  mr.Destroy;
+  Result:=format(RSLinesReadaedWithSum,[linescount,sum]);
+end;
+
 procedure DoTest(ATestFunc:TTestFunc;ATestName,AFileName:string);
 var
-  TestResult:int64;
+  TestResult:string;
   LPTime:Tdatetime;
 begin
   writeln(ATestName,':');
@@ -122,17 +219,18 @@ begin
 end;
 
 begin
-  writeln((inttohex(ord('0') or ord('1') or ord('2') or ord('3') or ord('4') or ord('5') or
-           ord('6') or ord('7') or ord('8') or ord('9'))));
-  writeln(inttohex(byte(not $3f)));
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
-  //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
-  DoTest(@TestMMFParseString,'Memory Mapped File (ParseString)',DefaultFileName);
-  DoTest(@TestMMFSkipString,'Memory Mapped File (SkipString)',DefaultFileName);
-  DoTest(@TestMMFParseinteger,'Memory Mapped File (ParseInteger)',DefaultFileName);
-  {$ifdef fpc}
-  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream (ParseString)',DefaultFileName);
-  {$endif}
+  DoTest(@WritelnInts,'WritelnInts',DefaultFileName);
+  DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
+  DoTest(@TestTStringList,'TStringList.LoadFromFile',DefaultFileName);
+  DoTest(@TestTStringListPlusIntToStr,'TStringList.LoadFromFile+IntToStr',DefaultFileName);
+  DoTest(@TestMMFSkipString,'MMF (SkipString)',DefaultFileName);
+ {$ifdef fpc}
+  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream (SkipString)',DefaultFileName);
+ {$endif}
+  DoTest(@TestMMFParseString,'MMF (ParseString)',DefaultFileName);
+  DoTest(@TestMMFParseStringPlusIntToStr,'MMF (ParseString+IntToStr)',DefaultFileName);
+  DoTest(@TestMMFParseinteger,'MMF (ParseInteger)',DefaultFileName);
 end.
 
 

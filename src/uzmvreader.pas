@@ -85,6 +85,8 @@ type
       function EOF:Boolean;inline;
       function ParseString:AnsiString;
       function ParseString2:AnsiString;
+      function ParseShortString:ShortString;
+      function ParseShortString2:ShortString;
       procedure SkipString;
       procedure SkipString2;
       function ParseInteger:Integer;
@@ -472,6 +474,59 @@ begin
  {$else}
   {$Error Not Implemented}
  {$endif}
+{$ifdef fpc}
+  {$pop}
+{$endif}
+end;
+function TZMemReader.ParseShortString:ShortString;
+var
+  PEOL:int64;
+begin
+  PEOL:=SkipSpaces;
+  if PEOL=CNotInThisPage then begin
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    result:=ParseShortString();
+  end else begin
+    fInMemPosition:=PEOL;
+    result:=ParseShortString2;
+  end;
+end;
+function TZMemReader.ParseShortString2:ShortString;
+var
+  PEOL:int64;
+  l:integer;
+  ts:ShortString;
+begin
+{$ifdef fpc}
+  {$push}
+{$endif}
+ {$OVERFLOWCHECKS OFF}
+ {$RANGECHECKS OFF}
+  PEOL:=FindEOL;
+  if PEOL=fInMemPosition then
+    //сразу встретился перевод строки, пустая строка
+    exit('')
+  else if PEOL=CNotInThisPage then begin
+    //уперлись в границу области отображения, двигаем и читаем дальше
+    l:=fCurrentViewSize-fInMemPosition;
+    if l>255 then
+        raise EConvertError.Create('TZMemReader.ParseShortString2 l>255');
+    SetLength(Result,l);
+    Move(fMemory[fInMemPosition],Result[1],l);
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    ts:=ParseString2();
+    if (l+length(ts))>255 then
+      raise EConvertError.Create('TZMemReader.ParseShortString2 (l+length(ts))>255');
+    result:=result+ts;
+  end else begin
+    //Конец строки найден, создаем и возвращаем строку
+    l:=PEOL-fInMemPosition;
+    if l>255 then
+        raise EConvertError.Create('TZMemReader.ParseShortString2 l>255');
+    SetLength(Result,l);
+    Move(fMemory[fInMemPosition],Result[1],l);
+    fInMemPosition:=PEOL;
+  end;
 {$ifdef fpc}
   {$pop}
 {$endif}

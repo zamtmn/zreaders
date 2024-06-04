@@ -93,6 +93,9 @@ type
       function ParseInteger2:Integer;
       function ParseDouble:Double;
       function ParseDouble2:Double;
+      function ParseHexInteger:Integer;
+      function ParseHexInteger2:Integer;
+
       property Size:TInMemReaderInt read fSize;
       property CurrentPos:TInMemReaderInt read GetCurrentPos;
   end;
@@ -640,7 +643,7 @@ end;
 function TZMemReader.ParseInteger2:Integer;
 function onedigit(const d:byte):Cardinal;inline;
 begin
-  result:=ord(d)-ord('0');
+  result:=d-ord('0');
   if result>9 then
     raise EConvertError.Create('TZMemReader.ParseInteger2.toInt not digit');
 end;
@@ -881,6 +884,95 @@ begin
         if code<>0 then
           raise EConvertError.Create('TZMemReader.ParseDouble2 val with error')
       end;
+      fInMemPosition:=PEOL;
+    end;
+  {$ifdef fpc}
+    {$pop}
+  {$endif}
+end;
+
+
+function TZMemReader.ParseHexInteger:Integer;
+var
+  PEOL:int64;
+begin
+  PEOL:=SkipSpaces;
+  if PEOL=CNotInThisPage then begin
+    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+    result:=ParseHexInteger();
+  end else begin
+    fInMemPosition:=PEOL;
+    result:=ParseHexInteger2;
+  end;
+end;
+
+function TZMemReader.ParseHexInteger2:Integer;
+function oneHexDigit(const d:byte):Cardinal;inline;
+begin
+  result:=d-ord('0');
+  if result>15 then begin
+    result:=(d and $df)-ord('A')+10;
+    if result>15 then
+      raise EConvertError.Create('TZMemReader.ParseHexInteger2.HextoInt not digit');
+  end;
+end;
+function HextoUInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
+var
+  i:integer;
+begin
+  case l of
+    1:result:=oneHexDigit(bts[0]);
+    2:result:=16*oneHexDigit(bts[0])+oneHexDigit(bts[1]);
+    else begin
+      result:=oneHexDigit(bts[0]);
+      for i:=1 to l-1 do
+        result:=result*16+oneHexDigit(bts[i]);
+    end;
+  end;
+end;
+function HextoInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
+begin
+  case l of
+    1:result:=oneHexDigit(bts[0]);
+    2:result:=16*oneHexDigit(bts[0])+oneHexDigit(bts[1]);
+    else
+      result:=HextoUInt(@bts[0],l);
+  end;
+end;
+var
+  PEOL:int64;
+  l:int64;
+  ts:ShortString='';
+  resultStr:ShortString='';
+  code:integer;
+begin
+  {$ifdef fpc}
+    {$push}
+  {$endif}
+   { $OVERFLOWCHECKS OFF}
+   { $RANGECHECKS OFF}
+    PEOL:=FindEOL;
+    if PEOL=fInMemPosition then
+      //сразу встретился перевод строки, пустая строка
+      raise EConvertError.Create('TZMemReader.ParseHexInteger2 empty string')
+    else if PEOL=CNotInThisPage then begin
+      //уперлись в границу области отображения, двигаем и читаем дальше
+      l:=fCurrentViewSize-fInMemPosition;
+      SetLength(resultStr,l);
+      Move(fMemory[fInMemPosition],resultStr[1],l);
+      setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
+      ts:=ParseString2();
+      val('$'+resultStr+ts,result,code);
+      if code<>0 then
+        raise EConvertError.Create('TZMemReader.ParseHexInteger2 val with error')
+    end else begin
+      //Конец строки найден, парсим цыфры
+      //вариант с копированием
+      //l:=PEOL-fInMemPosition;
+      //SetLength(resultStr,l);
+      //Move(fMemory[fInMemPosition],resultStr[1],l);
+      //val(resultStr,result,code);
+      result:=HextoInt(@fMemory[fInMemPosition],PEOL-fInMemPosition);
       fInMemPosition:=PEOL;
     end;
   {$ifdef fpc}

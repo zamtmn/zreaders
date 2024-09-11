@@ -517,7 +517,7 @@ begin
     SetLength(Result,l);
     Move(fMemory[fInMemPosition],Result[1],l);
     setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
-    ts:=ParseString2();
+    ts:=ParseShortString2();
     if (l+length(ts))>255 then
       raise EConvertError.Create('TZMemReader.ParseShortString2 (l+length(ts))>255');
     result:=result+ts;
@@ -807,7 +807,7 @@ begin
       SetLength(resultStr,l);
       Move(fMemory[fInMemPosition],resultStr[1],l);
       setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
-      ts:=ParseString2();
+      ts:=ParseShortString2();
       val(resultStr+ts,result,code);
       if code<>0 then
         raise EConvertError.Create('TZMemReader.ParseInteger2 val with error')

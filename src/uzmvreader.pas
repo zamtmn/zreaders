@@ -93,8 +93,8 @@ type
       function ParseInteger2:Integer;
       function ParseDouble:Double;
       function ParseDouble2:Double;
-      function ParseHexInteger:Integer;
-      function ParseHexInteger2:Integer;
+      function ParseHexQWord:QWord;
+      function ParseHexQWord2:QWord;
 
       property Size:TInMemReaderInt read fSize;
       property CurrentPos:TInMemReaderInt read GetCurrentPos;
@@ -892,21 +892,21 @@ begin
 end;
 
 
-function TZMemReader.ParseHexInteger:Integer;
+function TZMemReader.ParseHexQWord:QWord;
 var
   PEOL:int64;
 begin
   PEOL:=SkipSpaces;
   if PEOL=CNotInThisPage then begin
     setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fCurrentViewSize));
-    result:=ParseHexInteger();
+    result:=ParseHexQWord();
   end else begin
     fInMemPosition:=PEOL;
-    result:=ParseHexInteger2;
+    result:=ParseHexQWord2;
   end;
 end;
 
-function TZMemReader.ParseHexInteger2:Integer;
+function TZMemReader.ParseHexQWord2:QWord;
 function oneHexDigit(const d:byte):Cardinal;inline;
 begin
   result:=d-ord('0');

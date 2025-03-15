@@ -171,9 +171,6 @@ var
   CurrentByte:Byte;
   CurrentWord:Word;
 begin
-  if fCurrentViewSize-fInMemPosition<2 then
-    setFromTMemViewInfo(fIS.MoveMemViewProc(fCurrentViewOffset+fInMemPosition));
-
   if fCurrentViewSize-fInMemPosition<2 then begin
     CurrentByte:=fastReadByte;
     if CurrentByte=byte(ChCR)then begin
@@ -227,108 +224,109 @@ begin
  {$ifdef FPC_LITTLE_ENDIAN}
   SkipEOLifNeed;
 
-  InMemPos:=fInMemPosition;
-  pch:=@fMemory[InMemPos];
-  n:=fCurrentViewSize-InMemPos;
- {$ifdef cpu64}
-  //проверяем по 8 байт
-  optin:=n div sizeof(qword);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X8:=pqword(pch)^;
-      T8 := (X8 xor CR_XOR_MASK8);
-      X8 := (X8 xor LF_XOR_MASK8);
-      V8 := T8 + SUB_MASK8;
-      T8 := not T8;
-      T8 := T8 and V8;
-      V8 := X8 + SUB_MASK8;
-      X8 := (not X8);
-      V8 := V8 and X8;
-      T8 := (T8 or V8) and OVERFLOW_MASK8;
-      if (T8<>0) then begin
-        {$if DECLARED(BsfQWord)}
-        n := BsfQWord(T8) shr 3;
-        {$else}
-        n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
-        {$endif}
-        FNeedScipEOL:=True;
-        inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
-        exit(InMemPos);
+  n:=fCurrentViewSize-fInMemPosition;
+  if n>0 then begin
+    InMemPos:=fInMemPosition;
+    pch:=@fMemory[InMemPos];
+   {$ifdef cpu64}
+    //проверяем по 8 байт
+    optin:=n div sizeof(qword);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X8:=pqword(pch)^;
+        T8 := (X8 xor CR_XOR_MASK8);
+        X8 := (X8 xor LF_XOR_MASK8);
+        V8 := T8 + SUB_MASK8;
+        T8 := not T8;
+        T8 := T8 and V8;
+        V8 := X8 + SUB_MASK8;
+        X8 := (not X8);
+        V8 := V8 and X8;
+        T8 := (T8 or V8) and OVERFLOW_MASK8;
+        if (T8<>0) then begin
+          {$if DECLARED(BsfQWord)}
+          n := BsfQWord(T8) shr 3;
+          {$else}
+          n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
+          {$endif}
+          FNeedScipEOL:=True;
+          inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
+          exit(InMemPos);
+        end;
+        inc(pqword(pch));
       end;
-      inc(pqword(pch));
+      inc(InMemPos,optin*sizeof(qword));
+      n:=n mod sizeof(qword);
     end;
-    inc(InMemPos,optin*sizeof(qword));
-    n:=n mod sizeof(qword);
-  end;
- {$endif}
-  //проверяем по 4 байта
-  optin:=n div sizeof(dword);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X4:=pdword(pch)^;
-      T4 := (X4 xor CR_XOR_MASK4);
-      X4 := (X4 xor LF_XOR_MASK4);
-      V4 := T4 + SUB_MASK4;
-      T4 := not T4;
-      T4 := T4 and V4;
-      V4 := X4 + SUB_MASK4;
-      X4 := (not X4);
-      V4 := V4 and X4;
-      T4 := (T4 or V4) and OVERFLOW_MASK4;
-      if T4<>0 then begin
-        {$if DECLARED(BsfDWord)}
-        n := BsfDWord(T4) shr 3;
-        {$else}
-        n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
-        {$endif}
-        FNeedScipEOL:=True;
-        inc(InMemPos,(optin-i)*sizeof(dword)-(4-n));
-        exit(InMemPos);
+   {$endif}
+    //проверяем по 4 байта
+    optin:=n div sizeof(dword);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X4:=pdword(pch)^;
+        T4 := (X4 xor CR_XOR_MASK4);
+        X4 := (X4 xor LF_XOR_MASK4);
+        V4 := T4 + SUB_MASK4;
+        T4 := not T4;
+        T4 := T4 and V4;
+        V4 := X4 + SUB_MASK4;
+        X4 := (not X4);
+        V4 := V4 and X4;
+        T4 := (T4 or V4) and OVERFLOW_MASK4;
+        if T4<>0 then begin
+          {$if DECLARED(BsfDWord)}
+          n := BsfDWord(T4) shr 3;
+          {$else}
+          n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
+          {$endif}
+          FNeedScipEOL:=True;
+          inc(InMemPos,(optin-i)*sizeof(dword)-(4-n));
+          exit(InMemPos);
+        end;
+        inc(pdword(pch));
       end;
-      inc(pdword(pch));
+      inc(InMemPos,optin*sizeof(dword));
+      n:=n mod sizeof(dword);
     end;
-    inc(InMemPos,optin*sizeof(dword));
-    n:=n mod sizeof(dword);
-  end;
 
-  //проверяем по 2 байта
-  optin:=n div sizeof(word);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X4:=pword(pch)^;
-      T4 := (X4 xor CR_XOR_MASK4);
-      X4 := (X4 xor LF_XOR_MASK4);
-      V4 := T4 + SUB_MASK4;
-      T4 := not T4;
-      T4 := T4 and V4;
-      V4 := X4 + SUB_MASK4;
-      X4 := (not X4);
-      V4 := V4 and X4;
-      T4 := (T4 or V4) and OVERFLOW_MASK4;
-      if T4<>0 then begin
-        n := Byte(Byte(T4 and $80 = 0));
-        FNeedScipEOL:=True;
-        inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
-        exit(InMemPos);
+    //проверяем по 2 байта
+    optin:=n div sizeof(word);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X4:=pword(pch)^;
+        T4 := (X4 xor CR_XOR_MASK4);
+        X4 := (X4 xor LF_XOR_MASK4);
+        V4 := T4 + SUB_MASK4;
+        T4 := not T4;
+        T4 := T4 and V4;
+        V4 := X4 + SUB_MASK4;
+        X4 := (not X4);
+        V4 := V4 and X4;
+        T4 := (T4 or V4) and OVERFLOW_MASK4;
+        if T4<>0 then begin
+          n := Byte(Byte(T4 and $80 = 0));
+          FNeedScipEOL:=True;
+          inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
+          exit(InMemPos);
+        end;
+        inc(pword(pch));
       end;
-      inc(pword(pch));
+      inc(InMemPos,optin*sizeof(word));
+      n:=n mod sizeof(word);
     end;
-    inc(InMemPos,optin*sizeof(word));
-    n:=n mod sizeof(word);
-  end;
 
-  //остатки проверяем по байту
-  for i:=n-1 downto 0 do begin
-    if byte(pch^)<14 then
-      if (pch^=ChLF)or(pch^=ChCR) then begin  //pch^ in CLFCR медленней в 2 раза
-        FNeedScipEOL:=True;
-        inc(InMemPos,n-i-1);
-        exit(InMemPos);
-      end;
-    inc(pch);
+    //остатки проверяем по байту
+    for i:=n-1 downto 0 do begin
+      if byte(pch^)<14 then
+        if (pch^=ChLF)or(pch^=ChCR) then begin  //pch^ in CLFCR медленней в 2 раза
+          FNeedScipEOL:=True;
+          inc(InMemPos,n-i-1);
+          exit(InMemPos);
+        end;
+      inc(pch);
+    end;
+    inc(InMemPos,n);
   end;
-  inc(InMemPos,n);
-
 
   if InMemPos=fSize then
     result:=InMemPos
@@ -371,105 +369,105 @@ begin
  {$ifdef FPC_LITTLE_ENDIAN}
   SkipEOLifNeed;
 
-  InMemPos:=fInMemPosition;
-  pch:=@fMemory[InMemPos];
-  n:=fCurrentViewSize-InMemPos;
- {$ifdef cpu64}
-  //проверяем по 8 байт
-  optin:=n div sizeof(qword);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X8:=pqword(pch)^;
-      T8 := (X8 xor SPACE_XOR_MASK8);
-      X8 := (X8 xor TAB_XOR_MASK8);
-      V8 := T8 + SUB_MASK8;
-      T8 := not T8;
-      T8 := T8 and V8;
-      V8 := X8 + SUB_MASK8;
-      X8 := (not X8);
-      V8 := V8 and X8;
-      T8 := ((T8 or V8) and OVERFLOW_MASK8) xor OVERFLOW_MASK8;
-      if T8<>0 then begin
-        {$if DECLARED(BsfQWord)}
-        n := BsfQWord(T8) shr 3;
-        {$else}
-        n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
-        {$endif}
-        inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
-        exit(InMemPos);
+  n:=fCurrentViewSize-fInMemPosition;
+  if n>0 then begin
+    InMemPos:=fInMemPosition;
+    pch:=@fMemory[InMemPos];
+   {$ifdef cpu64}
+    //проверяем по 8 байт
+    optin:=n div sizeof(qword);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X8:=pqword(pch)^;
+        T8 := (X8 xor SPACE_XOR_MASK8);
+        X8 := (X8 xor TAB_XOR_MASK8);
+        V8 := T8 + SUB_MASK8;
+        T8 := not T8;
+        T8 := T8 and V8;
+        V8 := X8 + SUB_MASK8;
+        X8 := (not X8);
+        V8 := V8 and X8;
+        T8 := ((T8 or V8) and OVERFLOW_MASK8) xor OVERFLOW_MASK8;
+        if T8<>0 then begin
+          {$if DECLARED(BsfQWord)}
+          n := BsfQWord(T8) shr 3;
+          {$else}
+          n := Byte(Byte(T8 and $80 = 0) + Byte(T8 and $8080 = 0) + Byte(T8 and $808080 = 0) + Byte(T8 and $80808080 = 0) + Byte(T8 and $8080808080 = 0) + Byte(T8 and $808080808080 = 0) + Byte(T8 and $80808080808080 = 0));
+          {$endif}
+          inc(InMemPos,(optin-i)*sizeof(qword)-(8-n));
+          exit(InMemPos);
+        end;
+        inc(pqword(pch));
       end;
-      inc(pqword(pch));
+      inc(InMemPos,optin*sizeof(qword));
+      n:=n mod sizeof(qword);
     end;
-    inc(InMemPos,optin*sizeof(qword));
-    n:=n mod sizeof(qword);
-  end;
- {$endif}
-  //проверяем по 4 байта
-  optin:=n div sizeof(dword);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X4:=pdword(pch)^;
-      T4 := (X4 xor SPACE_XOR_MASK4);
-      X4 := (X4 xor TAB_XOR_MASK4);
-      V4 := T4 + SUB_MASK4;
-      T4 := not T4;
-      T4 := T4 and V4;
-      V4 := X4 + SUB_MASK4;
-      X4 := (not X4);
-      V4 := V4 and X4;
-      T4 := (((T4 or V4)and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
-      if T4<>0 then begin
-        {$if DECLARED(BsrDWord)}
-        n := BsfDWord(T4) shr 3;
-        {$else}
-        n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
-        {$endif}
-        inc(InMemPos,(optin-i)*sizeof(dword)-(4-n));
-        exit(InMemPos);
+   {$endif}
+    //проверяем по 4 байта
+    optin:=n div sizeof(dword);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X4:=pdword(pch)^;
+        T4 := (X4 xor SPACE_XOR_MASK4);
+        X4 := (X4 xor TAB_XOR_MASK4);
+        V4 := T4 + SUB_MASK4;
+        T4 := not T4;
+        T4 := T4 and V4;
+        V4 := X4 + SUB_MASK4;
+        X4 := (not X4);
+        V4 := V4 and X4;
+        T4 := (((T4 or V4)and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
+        if T4<>0 then begin
+          {$if DECLARED(BsrDWord)}
+          n := BsfDWord(T4) shr 3;
+          {$else}
+          n := Byte(Byte(T4 and $80 = 0) + Byte(T4 and $8080 = 0) + Byte(T4 and $808080 = 0));
+          {$endif}
+          inc(InMemPos,(optin-i)*sizeof(dword)-(4-n));
+          exit(InMemPos);
+        end;
+        inc(pdword(pch));
       end;
-      inc(pdword(pch));
+      inc(InMemPos,optin*sizeof(dword));
+      n:=n mod sizeof(dword);
     end;
-    inc(InMemPos,optin*sizeof(dword));
-    n:=n mod sizeof(dword);
-  end;
 
-  //проверяем по 2 байта
-  optin:=n div sizeof(word);
-  if optin>0 then begin
-    for i:=optin-1 downto 0 do begin
-      X4:=pword(pch)^;
-      T4 := (X4 xor SPACE_XOR_MASK4);
-      X4 := (X4 xor TAB_XOR_MASK4);
-      V4 := T4 + SUB_MASK4;
-      T4 := not T4;
-      T4 := T4 and V4;
-      V4 := X4 + SUB_MASK4;
-      X4 := (not X4);
-      V4 := V4 and X4;
-      T4 := (((T4 or V4) and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
-      if T4<>0 then begin
-        n := Byte(T4 = 0);
-        inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
-        exit(InMemPos);
+    //проверяем по 2 байта
+    optin:=n div sizeof(word);
+    if optin>0 then begin
+      for i:=optin-1 downto 0 do begin
+        X4:=pword(pch)^;
+        T4 := (X4 xor SPACE_XOR_MASK4);
+        X4 := (X4 xor TAB_XOR_MASK4);
+        V4 := T4 + SUB_MASK4;
+        T4 := not T4;
+        T4 := T4 and V4;
+        V4 := X4 + SUB_MASK4;
+        X4 := (not X4);
+        V4 := V4 and X4;
+        T4 := (((T4 or V4) and OVERFLOW_MASK4)xor OVERFLOW_MASK4);
+        if T4<>0 then begin
+          n := Byte(T4 = 0);
+          inc(InMemPos,(optin-i)*sizeof(word)-(2-n));
+          exit(InMemPos);
+        end;
+        inc(pword(pch));
       end;
-      inc(pword(pch));
+      inc(InMemPos,optin*sizeof(word));
+      n:=n mod sizeof(word);
     end;
-    inc(InMemPos,optin*sizeof(word));
-    n:=n mod sizeof(word);
+
+    //остатки проверяем по байту
+    for i:=n-1 downto 0 do begin
+      if byte(pch^)>32 then
+        if (pch^<>ChSpace)and(pch^<>ChTab) then begin  //pch^ in CLFCR медленней в 2 раза
+          inc(InMemPos,n-i-1);
+          exit(InMemPos);
+        end;
+      inc(pch);
+    end;
+    inc(InMemPos,n);
   end;
-
-  //остатки проверяем по байту
-  for i:=n-1 downto 0 do begin
-    if byte(pch^)>32 then
-      if (pch^<>ChSpace)and(pch^<>ChTab) then begin  //pch^ in CLFCR медленней в 2 раза
-        inc(InMemPos,n-i-1);
-        exit(InMemPos);
-      end;
-    inc(pch);
-  end;
-  inc(InMemPos,n);
-
-
   if InMemPos=fSize then
     result:=InMemPos
   else

@@ -72,16 +72,16 @@ type
         fIS:IMemViewSource;
         FCurrentViewPos:TCurrentViewPos;
         FNeedScipEOL:boolean;
-      function GetCurrentPos:TInMemReaderInt;
-      function FindEOL:int64;inline;
+      function GetCurrentPos:TInMemReaderInt;//без инлайна чуть чуть быстрее??
+      function FindEOL:int64;//без инлайна чуть чуть быстрее??
       function SkipSpaces:int64;inline;
       procedure SkipEOL;inline;
       procedure SkipEOLifNeed;inline;
       function fastReadByte:byte;inline;
       procedure ResetLastChar;inline;
-      procedure setFromTMemViewInfo(AMVI:TMemViewInfo);
+      procedure setFromTMemViewInfo(const AMVI:TMemViewInfo);
     public
-      procedure setSource(AIS:IMemViewSource);
+      procedure setSource(const AIS:IMemViewSource);
       function EOF:Boolean;inline;
       function ParseString:AnsiString;
       function ParseString2:AnsiString;
@@ -101,6 +101,24 @@ type
   end;
 
 implementation
+
+procedure TZMemReader.setFromTMemViewInfo(const AMVI:TMemViewInfo);
+begin
+  with AMVI do begin
+    fMemory:=Memory;
+    fCurrentViewOffset:=CurrentViewOffset;
+    fCurrentViewSize:=CurrentViewSize;
+    fInMemPosition:=Position-CurrentViewOffset;
+    fSize:=Size;
+
+    {if CurrentViewOffset=0 then
+      FCurrentViewPos:=CVPFirst
+    else }if fCurrentViewOffset+fCurrentViewSize>=fSize then
+      FCurrentViewPos:=CVPLast
+    else
+      FCurrentViewPos:=CVPNext;
+  end;
+end;
 
 function TZMemReader.GetCurrentPos:TInMemReaderInt;
 begin
@@ -124,48 +142,6 @@ begin
   end;
 end;
 
-
-function TZMemReader.EOF:Boolean;
-begin
-  SkipEOLifNeed;
-  if FCurrentViewPos<>CVPLast then
-    result:=false
-  else
-    result:=(fCurrentViewOffset+fInMemPosition)>=fSize;
-end;
-
-procedure TZMemReader.setFromTMemViewInfo(AMVI:TMemViewInfo);
-begin
-  with AMVI do begin
-    fMemory:=Memory;
-    fCurrentViewOffset:=CurrentViewOffset;
-    fCurrentViewSize:=CurrentViewSize;
-    fInMemPosition:=Position-CurrentViewOffset;
-    fSize:=Size;
-
-    {if CurrentViewOffset=0 then
-      FCurrentViewPos:=CVPFirst
-    else }if fCurrentViewOffset+fCurrentViewSize>=fSize then
-      FCurrentViewPos:=CVPLast
-    else
-      FCurrentViewPos:=CVPNext;
-  end;
-end;
-
-procedure TZMemReader.setSource(AIS:IMemViewSource);
-begin
-  fIS:=AIS;
-  FNeedScipEOL:=false;
-  setFromTMemViewInfo(fIS.GetMemViewInfo);
-end;
-
-procedure TZMemReader.SkipEOLifNeed;
-begin
-  if FNeedScipEOL then begin
-    SkipEOL;
-    FNeedScipEOL:=false;
-  end;
-end;
 procedure TZMemReader.SkipEOL;
 var
   CurrentByte:Byte;
@@ -194,6 +170,29 @@ begin
   end;
 end;
 
+procedure TZMemReader.SkipEOLifNeed;
+begin
+  if FNeedScipEOL then begin
+    SkipEOL;
+    FNeedScipEOL:=false;
+  end;
+end;
+
+function TZMemReader.EOF:Boolean;
+begin
+  SkipEOLifNeed;
+  if FCurrentViewPos<>CVPLast then
+    result:=false
+  else
+    result:=(fCurrentViewOffset+fInMemPosition)>=fSize;
+end;
+
+procedure TZMemReader.setSource(const AIS:IMemViewSource);
+begin
+  fIS:=AIS;
+  FNeedScipEOL:=false;
+  setFromTMemViewInfo(fIS.GetMemViewInfo);
+end;
 
 function TZMemReader.FindEOL:int64;
 const
@@ -326,11 +325,11 @@ begin
       inc(pch);
     end;
     inc(InMemPos,n);
-  end;
-
-  if InMemPos=fSize then
-    result:=InMemPos
-  else
+    if InMemPos=fSize then
+      result:=InMemPos
+    else
+      result:=CNotInThisPage;
+  end else
     result:=CNotInThisPage;
  {$else}
   {$Error Not Implemented}
@@ -467,10 +466,11 @@ begin
       inc(pch);
     end;
     inc(InMemPos,n);
-  end;
-  if InMemPos=fSize then
-    result:=InMemPos
-  else
+    if InMemPos=fSize then
+      result:=InMemPos
+    else
+      result:=CNotInThisPage;
+  end else
     result:=CNotInThisPage;
  {$else}
   {$Error Not Implemented}

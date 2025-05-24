@@ -220,17 +220,18 @@ end;
 
 begin
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
-  DoTest(@WritelnInts,'WritelnInts',DefaultFileName);
-  DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
-  DoTest(@TestTStringList,'TStringList.LoadFromFile',DefaultFileName);
-  DoTest(@TestTStringListPlusIntToStr,'TStringList.LoadFromFile+IntToStr',DefaultFileName);
+  //раскоментируй нужные тесты
+  //DoTest(@WritelnInts,'WritelnInts',DefaultFileName);
+  //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
+  //DoTest(@TestTStringList,'TStringList.LoadFromFile',DefaultFileName);
+  //DoTest(@TestTStringListPlusIntToStr,'TStringList.LoadFromFile+IntToStr',DefaultFileName);
   DoTest(@TestMMFSkipString,'MMF (SkipString)',DefaultFileName);
  {$ifdef fpc}
   DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream (SkipString)',DefaultFileName);
  {$endif}
-  DoTest(@TestMMFParseString,'MMF (ParseString)',DefaultFileName);
-  DoTest(@TestMMFParseStringPlusIntToStr,'MMF (ParseString+IntToStr)',DefaultFileName);
-  DoTest(@TestMMFParseinteger,'MMF (ParseInteger)',DefaultFileName);
+  //DoTest(@TestMMFParseString,'MMF (ParseString)',DefaultFileName);
+  //DoTest(@TestMMFParseStringPlusIntToStr,'MMF (ParseString+IntToStr)',DefaultFileName);
+  //DoTest(@TestMMFParseinteger,'MMF (ParseInteger)',DefaultFileName);
 end.
 
 

@@ -792,8 +792,8 @@ end;
 var
   PEOL:int64;
   l:int64;
-  ts:ShortString='';
-  resultStr:ShortString='';
+  ts:ShortString{$ifdef fpc}=''{$endif};
+  resultStr:ShortString{$ifdef fpc}=''{$endif};
   code:integer;
 begin
   {$ifdef fpc}
@@ -848,9 +848,9 @@ function TZMemReader.ParseDouble2:Double;
 var
   PEOL:int64;
   l:int64;
-  ts:AnsiString='';
-  resultStr:AnsiString='';
-  ts255:shortstring='';
+  ts:AnsiString{$ifdef fpc}=''{$endif};
+  resultStr:AnsiString{$ifdef fpc}=''{$endif};
+  ts255:shortstring{$ifdef fpc}=''{$endif};
   code:integer;
 begin
   {$ifdef fpc}
@@ -946,8 +946,8 @@ end;
 var
   PEOL:int64;
   l:int64;
-  ts:ShortString='';
-  resultStr:ShortString='';
+  ts:ShortString{$ifdef fpc}=''{$endif};
+  resultStr:ShortString{$ifdef fpc}=''{$endif};
   code:integer;
 begin
   {$ifdef fpc}

@@ -325,7 +325,10 @@ begin
       inc(pch);
     end;
     inc(InMemPos,n);
-    if InMemPos=fSize then
+    //перевод строки не найден, проверяем достигли ли мы конца файла,
+    //если достигли, возвращаем позицию конца, если не достигли, возвращаем
+    //CNotInThisPage сигналя что надо сдвинуть окно чтения и искать дальше
+    if fCurrentViewOffset+InMemPos=fSize then
       result:=InMemPos
     else
       result:=CNotInThisPage;
@@ -459,14 +462,17 @@ begin
     //остатки проверяем по байту
     for i:=n-1 downto 0 do begin
       if byte(pch^)>32 then
-        if (pch^<>ChSpace)and(pch^<>ChTab) then begin  //pch^ in CLFCR медленней в 2 раза
+        if (pch^<>ChSpace)and(pch^<>ChTab) then begin
           inc(InMemPos,n-i-1);
           exit(InMemPos);
         end;
       inc(pch);
     end;
     inc(InMemPos,n);
-    if InMemPos=fSize then
+    //не пробелы и не табы не найдены, проверяем достигли ли мы конца файла,
+    //если достигли, возвращаем позицию конца, если не достигли, возвращаем
+    //CNotInThisPage сигналя что надо сдвинуть окно чтения и искать дальше
+    if fCurrentViewOffset+InMemPos=fSize then
       result:=InMemPos
     else
       result:=CNotInThisPage;

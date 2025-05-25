@@ -72,8 +72,8 @@ type
         fIS:IMemViewSource;
         FCurrentViewPos:TCurrentViewPos;
         FNeedScipEOL:boolean;
-      function GetCurrentPos:TInMemReaderInt;//без инлайна чуть чуть быстрее??
-      function FindEOL:int64;//без инлайна чуть чуть быстрее??
+      function GetCurrentPos:TInMemReaderInt;inline;
+      function FindEOL:int64;inline;
       function SkipSpaces:int64;inline;
       procedure SkipEOL;inline;
       procedure SkipEOLifNeed;inline;

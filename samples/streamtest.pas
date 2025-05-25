@@ -1,4 +1,4 @@
-program streamtest;
+﻿program streamtest;
 {$ifdef fpc}
   {$Mode objfpc}{$H+}
 {$else}
@@ -10,12 +10,13 @@ uses
  uzMVReader,uzMVSMemoryMappedFile{$ifdef fpc},uzMVSReadBufStream{$endif};
 
 const
-  CLinesCount=10000000;
+  CLinesCount=100000000;
   CModule=10;
   CCharLen=1;
+  CLoopCount=1;
 
 resourcestring
-  RSLinesReadaed='%d lines with ints readed';
+  RSLinesReadaed='%d lines readed';
   RSLinesReadaedWithSum='%d lines with ints readed, sum = %d';
   RSFileExists='File "%s" already exists';
   RSFileCreated='File "%s" created, %d lines with ints, sum = %d"';
@@ -40,13 +41,12 @@ begin
     assign(f,AFileName);
     SetTextBuf(f,buf);
     Rewrite(f);
-    sum:=123456789;
-    writeln(f,inttostr(sum));
-    linescount:=1;
-    for i:=1 to CLinesCount-1 do begin
+    sum:=0;
+    linescount:=0;
+    for i:=0 to CLinesCount-1 do begin
       s:=IntToStr(i mod CModule);
-      if length(s)<6 then
-        s:=s+DupeString('1',CCharLen-length(s));
+      if length(s)<CCharLen then
+        s:=DupeString('0',CCharLen-length(s))+s;
         writeln(f,s);
       sum:=sum+strtoint(s);
       inc(linescount);
@@ -210,28 +210,39 @@ var
   TestResult:string;
   LPTime:Tdatetime;
 begin
-  writeln(ATestName,':');
+  writeln(format('  %s:',[ATestName]));
+  TestResult:='no run((';
   LPTime:=now();
-  TestResult:=ATestFunc(AFileName);
+  //if FileExists(DefaultFileName) then
+    TestResult:=ATestFunc(AFileName);
   LPTime:=now()-LPTime;
-  writeln('  Test result  = ',TestResult);
-  writeln('  Time elapsed = '+inttostr(round(lptime*10e7))+'ms');
+  writeln(format('    Test result  = %s',[TestResult]));
+  writeln(format('    Time elapsed = %dms',[round(lptime*10e7)]));
 end;
+
+var
+  i:integer;
 
 begin
   if ParamStr(1)<>'' then DefaultFileName:=ParamStr(1);
-  //раскоментируй нужные тесты
-  //DoTest(@WritelnInts,'WritelnInts',DefaultFileName);
-  //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
-  //DoTest(@TestTStringList,'TStringList.LoadFromFile',DefaultFileName);
-  //DoTest(@TestTStringListPlusIntToStr,'TStringList.LoadFromFile+IntToStr',DefaultFileName);
-  DoTest(@TestMMFSkipString,'MMF (SkipString)',DefaultFileName);
- {$ifdef fpc}
-  DoTest(@TestBufferedFileStream,'TBufferedFileStream+TReadBufStream (SkipString)',DefaultFileName);
- {$endif}
-  //DoTest(@TestMMFParseString,'MMF (ParseString)',DefaultFileName);
-  //DoTest(@TestMMFParseStringPlusIntToStr,'MMF (ParseString+IntToStr)',DefaultFileName);
-  //DoTest(@TestMMFParseinteger,'MMF (ParseInteger)',DefaultFileName);
+  writeln(format('Check "%s" file:',[DefaultFileName]));
+  DoTest(@WritelnInts,'WritelnInts',DefaultFileName);
+  for i:=1 to CLoopCount do begin
+    writeln(format('Loop %d from %d:',[i,CLoopCount]));
+    //раскоментируй нужные тесты
+      //DoTest(@TestReadLn,'ReadLn+SetTextBuf(65536)',DefaultFileName);
+      //DoTest(@TestTStringList,'TStringList.LoadFromFile',DefaultFileName);
+      DoTest(@TestMMFSkipString,'TZMVSMemoryMappedFile (Skip)',DefaultFileName);
+   {$ifdef fpc}
+      DoTest(@TestBufferedFileStream,'TBufferedFileStream (Skip)',DefaultFileName);
+   {$endif}
+      //DoTest(@TestMMFParseString,'TZMVSMemoryMappedFile (ParseString)',DefaultFileName);
+      //DoTest(@TestMMFParseStringPlusIntToStr,'TZMVSMemoryMappedFile (ParseString+IntToStr)',DefaultFileName);
+      //DoTest(@TestMMFParseinteger,'TZMVSMemoryMappedFile (ParseInteger)',DefaultFileName);
+  end;
+  //readln;
 end.
+
+
 
 

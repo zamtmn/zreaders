@@ -236,11 +236,13 @@ const Access:array[0..4] of longword=(GENERIC_READ,GENERIC_WRITE,GENERIC_READ or
 var ModeEx,FileFlags,ShareFlags:longword;
     SystemInfo:TSystemInfo;
     fSizeH:DWORD;
+    wFilename:UnicodeString;
 begin
  inherited Create;
  GetSystemInfo(SystemInfo);
  fAllocationGranularity:=SystemInfo.dwAllocationGranularity;
  fFileName:=FileName;
+ wFilename:=FileName;
  ModeEx:=Mode and not (fmShareExclusive or fmShareExclusive or fmShareDenyRead or fmShareDenyWrite or fmShareDenyNone);
  fCurrentViewOffset:=0;
  fCurrentViewSize:=0;
@@ -268,7 +270,7 @@ begin
    end;
   end;
  end;
- fFileHandle:=CreateFile(PChar(fFileName),Access[ModeEx],ShareFlags,nil,CreateFlag[ModeEx],FileFlags,0);
+ fFileHandle:=CreateFileW(PUnicodeChar(@wFileName[1]),Access[ModeEx],ShareFlags,nil,CreateFlag[ModeEx],FileFlags,0);
  if fFileHandle<>INVALID_HANDLE_VALUE then begin
   fSize:=GetFileSize(fFileHandle,@fSizeH);
   fSize:=fSize+(QWORD(fSizeH) shl 32);

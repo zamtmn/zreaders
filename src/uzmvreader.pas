@@ -81,8 +81,10 @@ type
       procedure ResetLastChar;inline;
       procedure setFromTMemViewInfo(const AMVI:TMemViewInfo);
     public
+      constructor Create(const AIS:IMemViewSource);overload;
       procedure setSource(const AIS:IMemViewSource);
       function EOF:Boolean;inline;
+      function HaveData:Boolean;inline;
       function ParseString:AnsiString;
       function ParseString2:AnsiString;
       function ParseShortString:ShortString;
@@ -187,11 +189,21 @@ begin
     result:=(fCurrentViewOffset+fInMemPosition)>=fSize;
 end;
 
+function  TZMemReader.HaveData:Boolean;
+begin
+  result:=fSize>0;
+end;
+
 procedure TZMemReader.setSource(const AIS:IMemViewSource);
 begin
   fIS:=AIS;
   FNeedScipEOL:=false;
   setFromTMemViewInfo(fIS.GetMemViewInfo);
+end;
+
+constructor TZMemReader.Create(const AIS:IMemViewSource);
+begin
+  setSource(AIS);
 end;
 
 function TZMemReader.FindEOL:int64;

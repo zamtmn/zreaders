@@ -83,6 +83,7 @@ type
     public
       constructor Create(const AIS:IMemViewSource);overload;
       procedure setSource(const AIS:IMemViewSource);
+      procedure setPosition(ANewPosition:int64);
       function EOF:Boolean;inline;
       function HaveData:Boolean;inline;
       function ParseString:AnsiString;
@@ -199,6 +200,12 @@ begin
   fIS:=AIS;
   FNeedScipEOL:=false;
   setFromTMemViewInfo(fIS.GetMemViewInfo);
+end;
+
+procedure TZMemReader.setPosition(ANewPosition:int64);
+begin
+  FNeedScipEOL:=false;
+  setFromTMemViewInfo(fis.MoveMemViewProc(ANewPosition));
 end;
 
 constructor TZMemReader.Create(const AIS:IMemViewSource);

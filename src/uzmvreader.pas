@@ -939,7 +939,7 @@ begin
       raise EConvertError.Create('TZMemReader.ParseHexInteger2.HextoInt not digit');
   end;
 end;
-function HextoUInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
+function HextoUInt({const bts:array of byte}const bts:pbyte; const l:integer):QWord;inline;
 var
   i:integer;
 begin
@@ -953,7 +953,7 @@ begin
     end;
   end;
 end;
-function HextoInt({const bts:array of byte}const bts:pbyte; const l:integer):integer;inline;
+function HextoInt64({const bts:array of byte}const bts:pbyte; const l:integer):Int64;inline;
 begin
   case l of
     1:result:=oneHexDigit(bts[0]);
@@ -995,7 +995,7 @@ begin
       //SetLength(resultStr,l);
       //Move(fMemory[fInMemPosition],resultStr[1],l);
       //val(resultStr,result,code);
-      result:=HextoInt(@fMemory[fInMemPosition],PEOL-fInMemPosition);
+      result:=HextoInt64(@fMemory[fInMemPosition],PEOL-fInMemPosition);
       fInMemPosition:=PEOL;
     end;
   {$ifdef fpc}
